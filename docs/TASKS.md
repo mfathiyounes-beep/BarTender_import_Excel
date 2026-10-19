@@ -31,8 +31,10 @@
 
 ## Phase 3 — Data sources
 - [x] Source implementation: .xlsx/.csv, sheet picker, header picker, visible data rows.
-- [ ] Full XLS/TSV + Unicode encoding, full-date/number formatting and precision warnings.
-- [ ] Sorting/filtering/refresh wizard, saved connections and connection diagnostics.
+- [x] Source implementation: TSV UTF-8 import, including Arabic text and blank row locations.
+- [ ] Full XLS + Unicode encoding, full-date/number formatting and precision warnings.
+- [x] Source implementation: sorting of Excel rows and sort-respecting print order.
+- [ ] Advanced filters/refresh wizard, saved connections and connection diagnostics.
 - [ ] Large-workbook memory/performance and malformed Excel fuzzing.
 
 ## Phase 4 — Templates
@@ -42,7 +44,8 @@
 
 ## Phase 5 — Printing
 - [x] Source implementation: Windows printer enumeration, manual system dialog and 100-label batches.
-- [ ] Driver tests, reprint/job log, timeout/error recovery, PDF export, calibration wizard.
+- [x] Source implementation: native batch PDF export via Save dialog.
+- [ ] Driver tests, reprint/job log, timeout/error recovery, PDF layout tests, calibration wizard.
 - [ ] Physical printer evidence. Pending for every model.
 
 ## Phase 6 — Professional capabilities
@@ -73,3 +76,11 @@
 - Full npm dependency install and npm audit cannot be performed without package registry/network access. The user's last npm install reported 20 advisories on an older dependency tree.
 
 **Maintainer signoff criteria:** confirm exact `npm test`, `npm run build`, `npm run dist:win` exit status, visually verify text labels against imported Excel, archive sample test print and machine/printer details, then update checkboxes.
+
+### Recent source additions (all require desktop E2E gates)
+- [x] Source: File/Edit/View/Insert/Data/Print menu wiring and Ctrl+O/S/P/Z/Y keyboard shortcuts.
+- [x] Source: four built-in text-only label examples and guarded save-as.
+- [x] Source: Excel/CSV/TSV importer with header picker and reorder-resistant names.
+- [x] Source: batch PDF export through native Electron Save dialog.
+- [ ] Verify PDF dimensions with generated PDF page metadata and Windows print calibration.
+- [ ] Verify Vite native JSX build, Electron CSP and production runtime.
