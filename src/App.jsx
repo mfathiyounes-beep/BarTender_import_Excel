@@ -137,6 +137,30 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    function keyboardShortcut(event) {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      const key = event.key.toLowerCase();
+      if (key === 's') { event.preventDefault(); saveTemplate(); return; }
+      if (key === 'o') { event.preventDefault(); fileRef.current?.click(); return; }
+      if (key === 'p') {
+        event.preventDefault();
+        if (sheet && total && !missing.length && !printing) void printBatch();
+        return;
+      }
+      const inInput = event.target?.closest?.('input, textarea, select, [contenteditable="true"]');
+      if (inInput) return;
+      if (key === 'z') {
+        event.preventDefault();
+        if (event.shiftKey) redoDraft(); else undoDraft();
+      } else if (key === 'y') {
+        event.preventDefault(); redoDraft();
+      }
+    }
+    window.addEventListener('keydown', keyboardShortcut);
+    return () => window.removeEventListener('keydown', keyboardShortcut);
+  }, [draft, sheet, total, printing, missing, historyVersion]);
+
   const notify = (type, text) => setNotice({ type, text });
 
   function applyTemplate(nextId) {
