@@ -31,7 +31,7 @@ Your results appear in:
 C:\Users\YOUSSEF\Desktop\freebar\BarTender_import_Excel\release\
 ```
 
-Look for an `Excel Label Studio Setup 0.2.0.exe` **installer** and a portable `Excel Label Studio 0.2.0.exe` (exact filenames can vary slightly with electron-builder). The installer installs the app on another Windows PC; the portable EXE runs without installation. **The receiving PC does not need Node.js or BarTender**.
+Look for an `Excel Label Studio Setup 0.3.0.exe` **installer** and a portable `Excel Label Studio 0.3.0.exe` (exact filenames can vary slightly with electron-builder). The installer installs the app on another Windows PC; the portable EXE runs without installation. **The receiving PC does not need Node.js or BarTender**.
 
 The Windows computer doing the build needs an internet connection for initial Electron downloads. The installed application can subsequently operate offline.
 
@@ -108,3 +108,16 @@ All imported spreadsheets are parsed on-device, no account, cloud database, or i
 `npm install` sometimes shows **deprecated dependencies and security findings** from the packaging toolchain. These warnings do not mean installation failed. Use `npm audit` for the exact dependency paths; do not blindly run `npm audit fix --force` because it can break Electron/Vite. Security audits and native printer smoke tests should be performed before distributing binaries broadly.
 
 This project is MIT licensed. See [LICENSE](LICENSE).
+
+
+## Designer improvements in v0.3.0
+
+The desktop workspace now includes functional **File, Edit, View, Insert, Data, and Print** menus; field duplication; undo/redo with Ctrl+Z / Ctrl+Y; Ctrl+S for template save, Ctrl+O for import and Ctrl+P to print. Zoom controls (50–200%), optional grid, per-record navigation, and clickable Excel column sorting help review your data before printing.
+
+Text fields support Arial, Tahoma, Segoe UI, Consolas or Times New Roman, plus bold, italic, underline, wrapping and 0°/90°/180°/270° rotation. These features need PDF/physical-print regression testing before being considered print-calibrated.
+
+The built-in reusable layouts are **Product label**, **Shelf / Stock label**, **Serial number label**, and **Shipping address**. The latter layouts expect their matching Excel headings (e.g. Serial, Recipient, Address, City); mismatches must be mapped explicitly, never automatically replaced with unrelated data.
+
+Supports **.xlsx, .csv and .tsv**, including tab-separated Arabic values. The same safe document renderer is used for preview, native Windows printing and **Export PDF**. PDF export is available in the installed Electron desktop application under the Print menu; a Save dialog writes the batch to a chosen .pdf file. PDF export remains runtime-unverified on Windows.
+
+This is original software with a BarTender-inspired professional workflow, **not a pixel-identical BarTender copy**. Full Automation/Professional feature parity is tracked in `docs/BARTENDER_FEATURE_COMPARISON.md` and `docs/TASKS.md`.
