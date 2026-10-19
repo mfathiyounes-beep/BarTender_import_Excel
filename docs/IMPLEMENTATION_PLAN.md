@@ -37,3 +37,6 @@ Scope: independent Windows offline label designer. Text-only Excel labels are th
 - Do not assume security advisories fixed without `npm audit` evidence.
 - Don't claim an installer exists until a Windows build actually creates it.
 - No button enabled without a meaningful, wired action.
+
+## Verified execution milestone
+As of 2026-10-19, CI run 39273573305 completed full npm test, Vite frontend build, and Windows NSIS/portable packaging, and uploaded its EXE artifact. Subsequent tests cover versioned template backup/recovery and drag/resize geometry. Real Windows end-user interaction, PDF page-dimension proofing, and specific printer models remain acceptance gates. Do not merge untested new automation code into this release.

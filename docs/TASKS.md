@@ -9,9 +9,9 @@
 - [x] Fix strict header matching so a missing field does not print a different column (source change and isolated logic check).
 - [x] Fix zero/invalid quantity silently treated as one copy (source change and logic regression test).
 - [x] Preserve later spreadsheet columns with blank header cells; report duplicate headings (source change).
-- [ ] Run actual `npm test` / `npm run build` on a full installed dependency tree and resolve failures.
+- [x] Full dependency installation, `npm test`, and `npm run build` passed in GitHub Actions (run 39273573305; repeated on later revisions).
 - [ ] Collect and resolve dependency audit advisories with reviewed `npm audit --json`.
-- [ ] Get GitHub Actions runner executing jobs (previous runs failed with zero steps / no runner).
+- [x] GitHub Actions runners execute the verification and Windows installer jobs (run 39273573305).
 - [ ] Establish baseline screenshot, Windows print sample, and exact printer calibration.
 
 ## Phase 1 — Desktop layout / UX
@@ -20,7 +20,8 @@
 - [x] Source implementation: grid and zoom controls and record navigation.
 - [x] Source implementation: field duplication and font/italic/underline/rotation/wrap property editors.
 - [ ] Run Electron E2E for all enabled menu commands and keyboard accessibility.
-- [ ] Add real ruler, resize handles, snapping, grouping, layers, tool palettes, proper shortcuts.
+- [x] Source + unit tests: on-canvas resize handles, field movement and optional 5 mm snapping.
+- [ ] Add real ruler, group/layers, alignment guides, palettes and more keyboard operations.
 - [ ] Split oversized `App.jsx` into tested designer/data/print components.
 
 ## Phase 2 — Text-only labels
@@ -39,7 +40,8 @@
 
 ## Phase 4 — Templates
 - [x] Source implementation: basic localStorage JSON save/edit/duplicate/export/import/delete.
-- [ ] Storage error messages, versioned durable persistence and template recovery/history.
+- [x] Source + unit tests: versioned localStorage envelope, previous-good backup recovery, error surfacing and full-library JSON import/export.
+- [ ] Durable transactional file-backed template storage, autosave, crash recovery and version history.
 - [ ] Template groups/categories, favorites and ready-made designs.
 
 ## Phase 5 — Printing
@@ -62,18 +64,18 @@
 
 ## Phase 9 — Distribution
 - [x] Source packaging configuration includes NSIS installer and portable targets.
-- [ ] Successful Windows build and uploaded EXE artifacts.
+- [x] Windows NSIS and portable builds succeeded; artifact uploaded in run 39273573305 (v0.3), verified packaging jobs in later runs.
 - [ ] Fresh Windows 10/11 machine installs, launches, saves, prints and uninstalls correctly.
 
 ## Phase 10 — QA
 - [x] Add regression tests for Excel sample/formula, column-name matching, quantity validation, HTML escaping.
-- [ ] Full `node --test` and web/Electron build on Windows or CI.
+- [x] Full Node test suite and Vite production build passed in GitHub Actions (run 39273573305; later revisions include new template and geometry tests).
 - [ ] Playwright Electron UX, integrated printer simulator, PDF compare, accessibility and physical printer tests.
 
 ## Known blockers
-- GitHub Actions runs currently fail before steps begin; no installation artifact available from CI.
+- Previous GitHub Actions scheduling failures have been resolved; Windows installers now build. Future run failures should be reviewed separately.
 - No real Windows printer/driver access in this agent environment.
-- Full npm dependency install and npm audit cannot be performed without package registry/network access. The user's last npm install reported 20 advisories on an older dependency tree.
+- GitHub Actions can now install packages and run npm audits. Production dependency audit is uploaded as a separate report (moderate threshold); inspect that report and development-tooling advisories before declaring audit clean.
 
 **Maintainer signoff criteria:** confirm exact `npm test`, `npm run build`, `npm run dist:win` exit status, visually verify text labels against imported Excel, archive sample test print and machine/printer details, then update checkboxes.
 
@@ -84,3 +86,12 @@
 - [x] Source: batch PDF export through native Electron Save dialog.
 - [ ] Verify PDF dimensions with generated PDF page metadata and Windows print calibration.
 - [ ] Verify Vite native JSX build, Electron CSP and production runtime.
+
+## Phase 4 continuation — current source branch
+- [x] Added `src/template-library.js` with validated envelope migration, recoverable previous-good copy, and explicit save failure reporting.
+- [x] Added `src/template-library.test.js` for corrupt/missing storage, schema versions, duplicate IDs, quotas, and backups.
+- [x] Added `src/editor-geometry.js` / `src/editor-geometry.test.js` for zoom-independent movement, bounded resize, and optional snapping.
+- [x] Added selected-field on-canvas resize handle and confirmation when discarding unsaved edits (source only).
+- [x] Block batch printing when duplicate Excel header labels would make columns ambiguous (source only).
+- [ ] Electron-level E2E tests for drag/resize, templates restored across restarts, and PDF export.
+- [ ] Real hardware print calibration and documented results by printer model.

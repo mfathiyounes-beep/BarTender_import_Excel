@@ -32,7 +32,7 @@ Small, offline-oriented React/Vite + Electron application, optimized for **Excel
 6. **Over-permissive script CSP**: removed inline React Refresh JS path and set script-src self; package uses Vite native JSX. Requires production build verification.
 
 ## Remaining critical risks
-- **Windows runner failure**: GitHub Actions jobs immediately fail before executing any step (zero step entries / no assigned runner). This is environment/account scheduling, not proof of successful or failed npm tests. Review Actions/account runner availability.
+- **Windows runner status:** GitHub Actions jobs execute successfully now. Run 39273573305 passed npm tests, Vite build, NSIS packaging, portable packaging and artifact upload. Physical installation/printer testing remains open.
 - **Real hardware not validated**: Electron `print` returns OS submission result, not physical print completion. Page size / fonts / driver stock must be tested on label printer hardware.
 - **npm audit**: user's Windows log displayed 20 vulnerabilities (6 moderate, 13 high, 1 critical) on the previous dependency tree. Full `npm audit --json` output is needed to attribute advisories; do not run `npm audit fix --force` blindly. After package edits rerun install, audit and classify direct/transitive impact.
 - **Workbook limits**: .xlsx and .csv only, 15 MB maximum, 40 columns and around 10,000 records per sheet; more advanced data handling absent. Excel numeric identifiers longer than 15 digits may already be rounded before import.
@@ -40,7 +40,7 @@ Small, offline-oriented React/Vite + Electron application, optimized for **Excel
 - **Data model**: one page/label template with text object array only; no layers, images, tables, group operations, printer-aware layout, print-job DB.
 - **Preview fidelity**: CSS mm sizing matches print-document units, but print drivers may scale or clip. Arabic glyph fallback and rotated-text bounding boxes require tests.
 - **Security testing**: Electron IPC and template import validation are partially guarded, but file:// HTML printing, dependency advisories, untrusted workbook memory use and cross-window navigation require dedicated threat modeling.
-- **Testing**: JS pure module checks can run in isolation; React JSX build/E2E, real import packages, Windows packaging and physical printing cannot be claimed as passing until their respective tools/runner execute.
+- **Testing:** Real GitHub Actions runs have verified Node unit tests, Vite production build, and Windows EXE packaging. Remaining: Electron GUI workflows, native PDF output, installation and physical printer evidence.
 
 ## Immediate verification on user's Windows machine
 ```powershell
@@ -63,3 +63,12 @@ On EXE failure inspect full PowerShell output; expected binaries under `release/
 - Added TSV import, with blank line preservation for source-row numbering.
 - Removed unused React refresh plugin, switching to native Vite JSX transform for `script-src 'self'`.
 - Offline test harness: 17 isolated tests from `src/core.test.js` and `src/templates.test.js` passed by evaluating dependency-free source. This is **not** a substitute for `npm test` on Node with project dependencies, React build, Electron E2E or a real printer.
+
+## v0.4 follow-up: persistence and canvas controls
+- Historical template arrays still load under the original localStorage key. New writes are versioned; last valid contents are backed up before changing the primary.
+- Damaged template JSON triggers recovery from the backup copy, or a storage-blocking error if both versions are unreadable. Template CRUD only updates UI state after a successful synchronous storage write.
+- Full user-template backup/merge JSON workflow, with duplicate-safe imported IDs and 50-template limit. File-backed persistence remains future work.
+- Pure `editor-geometry` helpers bound movement/resizing to label millimeters and optional 5 mm snapping.
+- The label editor displays a selection rectangle and resize grip. These editor controls do not appear in the print HTML.
+- Printing now refuses sheets with duplicate column headings, avoiding accidental ambiguous field selection.
+- Follow-up GitHub Actions verified installation, tests and frontend build. The production dependency report is captured as an artifact; physical hardware and UI E2E validation are not yet proven.

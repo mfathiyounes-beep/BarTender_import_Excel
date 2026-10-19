@@ -729,7 +729,7 @@ export default function App() {
           <div className="eyebrow">DESIGN ONCE · REUSE WITH EVERY EXCEL FILE</div>
           <h2>Text-only label designer</h2>
           <p>Place Excel columns exactly where you want on the printed label.</p>
-        </div><div className="small-version">Text mode · Offline</div></div>
+        </div><div className="small-version">v0.4 · Offline</div></div>
 
         <div className="design-toolbar" role="toolbar" aria-label="Label designer tools">
           <button type="button" title="Undo" disabled={!historyRef.current.past.length} onClick={undoDraft}><Undo2 size={16}/> Undo</button>

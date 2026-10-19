@@ -60,3 +60,8 @@ Windows 10/11 planned; Node.js required for **building**, not for installed EXE.
 
 ## PDF export path (source-implemented)
 An explicit user click sends the current bounded batch of label HTML through `label:export-pdf` IPC. The main process uses the same validation as print, displays a native Save dialog, loads transient local print HTML in a sandboxed hidden window and calls `webContents.printToPDF` at `widthMm/25.4` × `heightMm/25.4` inches with `preferCSSPageSize`. It writes only the destination the user chose and cleans up the temporary HTML. PDF output and print-calibration tests remain pending.
+
+## Template storage evolution, v0.4
+`src/template-library.js` supports old JSON arrays at `excel-label-studio:text-templates:v1` and new envelopes with `kind: excel-label-studio-template-library`, `version: 2`. The previous known-good library is retained in a separate localStorage key ending `:previous-good`. Full backups are user-exportable as JSON and merges regenerate IDs so existing templates are not replaced. This is **not** a transactional database or full autosave/crash-recovery system; local profile deletion can still remove both keys. Export backups before moving to another PC.
+
+`src/editor-geometry.js` contains pure millimeter calculations for movement/resizing and optional 5 mm snapping. The React preview-only outline and resize handle do not enter the exported HTML, preserving print rendering.
