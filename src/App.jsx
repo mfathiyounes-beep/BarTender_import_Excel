@@ -3,7 +3,7 @@ import {
   FileSpreadsheet, UploadCloud, Printer, Search, Settings2, CheckCircle2,
   AlertCircle, ChevronLeft, ChevronRight, LayoutTemplate, Table2,
   ShieldCheck, Eye, ArrowRight, Info, Plus, Save, Trash2,
-  Download, FolderOpen, Move, Type, Columns3
+  Download, FolderOpen, Move, Type, Columns3, Undo2, Redo2, ZoomIn, ZoomOut, Grid2X2
 } from 'lucide-react';
 import { readSpreadsheet } from './importers.js';
 import { normalizeTable, guessMapping, totalLabels, makeBatch, PRINT_BATCH_SIZE } from './core.js';
@@ -49,6 +49,11 @@ export default function App() {
   const templateFileRef = useRef(null);
   const canvasRef = useRef(null);
   const dragRef = useRef(null);
+  const historyRef = useRef({ past: [], future: [] });
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const [showGrid, setShowGrid] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
   const [sheets, setSheets] = useState([]);
   const [fileName, setFileName] = useState('');
   const [sheetIndex, setSheetIndex] = useState(0);
@@ -90,10 +95,11 @@ export default function App() {
   const batchRows = makeBatch(printable, qtyMapping, useQuantities && qtyIndex >= 0, batchStart);
   const batches = Math.max(1, Math.ceil(total / PRINT_BATCH_SIZE));
   const currentBatch = total > 0 ? Math.floor(Math.min(batchStart, total - 1) / PRINT_BATCH_SIZE) + 1 : 1;
-  const previewRow = printable[0] || records[0] || EXAMPLE_ROW;
+  const previewRecords = printable.length ? printable : records;
+  const previewRow = previewRecords[bounded(previewIndex, 0, Math.max(0, previewRecords.length - 1))] || EXAMPLE_ROW;
   const previewExample = !sheet;
   const previewHtml = renderTextLabel(draft, headers, previewRow);
-  const previewScale = Math.min(2, 450 / (draft.width * pxPerMm));
+  const previewScale = Math.min(2, 450 / (draft.width * pxPerMm)) * zoom;
   const visibleSelected = visibleRows.length > 0 && visibleRows.every((row) => selection.has(row.id));
   const mappingSummary = draft.fields.filter((x) => x.type === 'column').length;
   const previewWarning = sheet && missing.length && !printable.length;
@@ -104,6 +110,7 @@ export default function App() {
   }, [savedTemplates]);
 
   useEffect(() => { setBatchStart(0); }, [selection, sheetIndex, draft, useQuantities, quantityColumn]);
+  useEffect(() => { setPreviewIndex(0); }, [selection, sheetIndex, fileName]);
 
   useEffect(() => {
     if (window.labelDesktop) {
@@ -120,10 +127,41 @@ export default function App() {
     setDraft(next);
     setDirty(false);
     setSelectedFieldId(next.fields[0]?.id || '');
+    historyRef.current = { past: [], future: [] };
+    setHistoryVersion((n) => n + 1);
+  }
+
+  function snapshot() {
+    const history = historyRef.current;
+    history.past.push(clone(draft));
+    if (history.past.length > 50) history.past.shift();
+    history.future = [];
+    setHistoryVersion((n) => n + 1);
+  }
+
+  function undoDraft() {
+    const history = historyRef.current;
+    if (!history.past.length) return;
+    history.future.push(clone(draft));
+    setDraft(history.past.pop());
+    setDirty(true);
+    setHistoryVersion((n) => n + 1);
+  }
+
+  function redoDraft() {
+    const history = historyRef.current;
+    if (!history.future.length) return;
+    history.past.push(clone(draft));
+    setDraft(history.future.pop());
+    setDirty(true);
+    setHistoryVersion((n) => n + 1);
   }
 
   function editDraft(transform) {
-    setDraft((previous) => sanitizeTemplate(transform(previous)));
+    const next = sanitizeTemplate(transform(draft));
+    if (!next || JSON.stringify(next) === JSON.stringify(draft)) return;
+    snapshot();
+    setDraft(next);
     setDirty(true);
   }
 
@@ -320,6 +358,7 @@ export default function App() {
     if (!targetField) return;
     event.preventDefault();
     setSelectedFieldId(id);
+    snapshot();
     dragRef.current = {
       pointerId: event.pointerId, id,
       startX: event.clientX, startY: event.clientY,
@@ -334,7 +373,7 @@ export default function App() {
     if (!dragging || dragging.pointerId !== event.pointerId) return;
     const dx = (event.clientX - dragging.startX) / (pxPerMm * dragging.scale);
     const dy = (event.clientY - dragging.startY) / (pxPerMm * dragging.scale);
-    editDraft((previous) => ({
+    setDraft((previous) => sanitizeTemplate({
       ...previous,
       fields: previous.fields.map((item) => item.id !== dragging.id ? item : {
         ...item,
@@ -342,6 +381,7 @@ export default function App() {
         y: Math.round(bounded(dragging.y + dy, 0, previous.height - item.height) * 2) / 2
       })
     }));
+    setDirty(true);
   }
 
   function pointerUp(event) {
@@ -494,7 +534,20 @@ export default function App() {
                 <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
               </select></label>
             </div>
-            <label className="checkbox-row"><input type="checkbox" checked={field.bold} onChange={(e) => updateField({ bold: e.target.checked })}/> Bold text</label>
+            <label className="form-field"><span>Font family</span><select value={field.fontFamily || 'Arial'} onChange={(e) => updateField({ fontFamily: e.target.value })}>
+              {['Arial', 'Tahoma', 'Segoe UI', 'Consolas', 'Times New Roman'].map((family) => <option key={family} value={family}>{family}</option>)}
+            </select></label>
+            <div className="dimension-grid">
+              <label className="form-field"><span>Rotation</span><select value={field.rotation || 0} onChange={(e) => updateField({ rotation: Number(e.target.value) })}>
+                {[0,90,180,270].map((n) => <option key={n} value={n}>{n}°</option>)}
+              </select></label>
+              <label className="checkbox-row"><input type="checkbox" checked={field.wrap !== false} onChange={(e) => updateField({ wrap: e.target.checked })}/> Wrap text</label>
+            </div>
+            <div className="text-format-checks">
+              <label className="checkbox-row"><input type="checkbox" checked={field.bold} onChange={(e) => updateField({ bold: e.target.checked })}/> Bold</label>
+              <label className="checkbox-row"><input type="checkbox" checked={Boolean(field.italic)} onChange={(e) => updateField({ italic: e.target.checked })}/> Italic</label>
+              <label className="checkbox-row"><input type="checkbox" checked={Boolean(field.underline)} onChange={(e) => updateField({ underline: e.target.checked })}/> Underline</label>
+            </div>
             {field.type === 'column' && sheet && resolveColumnIndex(sheet.headers, field) < 0 &&
               <div className="inline-warning"><AlertCircle size={15}/> Column not found. Choose the matching Excel header.</div>}
           </div>}
@@ -513,6 +566,17 @@ export default function App() {
           <p>Place Excel columns exactly where you want on the printed label.</p>
         </div><div className="small-version">Text mode · Offline</div></div>
 
+        <div className="design-toolbar" role="toolbar" aria-label="Label designer tools">
+          <button type="button" title="Undo" disabled={!historyRef.current.past.length} onClick={undoDraft}><Undo2 size={16}/> Undo</button>
+          <button type="button" title="Redo" disabled={!historyRef.current.future.length} onClick={redoDraft}><Redo2 size={16}/> Redo</button>
+          <span className="toolbar-separator"/>
+          <button type="button" className={showGrid ? 'toolbar-selected' : ''} onClick={() => setShowGrid((v) => !v)} aria-pressed={showGrid}><Grid2X2 size={16}/> Grid</button>
+          <span className="toolbar-separator"/>
+          <button type="button" aria-label="Zoom out" disabled={zoom <= .5} onClick={() => setZoom((n) => Math.max(.5, Math.round((n - .25) * 100) / 100))}><ZoomOut size={16}/></button>
+          <span className="zoom-label">{Math.round(zoom * 100)}%</span>
+          <button type="button" aria-label="Zoom in" disabled={zoom >= 2} onClick={() => setZoom((n) => Math.min(2, Math.round((n + .25) * 100) / 100))}><ZoomIn size={16}/></button>
+          {dirty && <span className="toolbar-dirty">Unsaved changes</span>}
+        </div>
         <div className="stat-grid">
           <div className="stat-card"><div className="stat-icon stat-blue"><Table2 size={19}/></div><span>Excel rows</span><strong>{records.length.toLocaleString()}</strong></div>
           <div className="stat-card"><div className="stat-icon stat-green"><CheckCircle2 size={19}/></div><span>Selected rows with data</span><strong>{printable.length.toLocaleString()}</strong></div>
@@ -524,7 +588,7 @@ export default function App() {
           <div className="preview-top"><div><div className="section-eyebrow">REAL PRINT LAYOUT</div>
             <h3><Eye size={18}/> {previewExample ? 'Example: this is how it prints' : 'Live preview from your Excel'}</h3>
           </div><span className="dimension-badge">{draft.width} × {draft.height} mm</span></div>
-          <div className="preview-canvas text-preview-area">
+          <div className={'preview-canvas text-preview-area ' + (showGrid ? 'preview-grid' : '')}>
             <style>{textLabelStyles}</style>
             <div className="preview-paper text-preview-paper" ref={canvasRef}
               style={{ width: draft.width * pxPerMm * previewScale, height: draft.height * pxPerMm * previewScale }}
@@ -536,10 +600,14 @@ export default function App() {
           </div>
           <div className="preview-bottom">
             <span><span className="live-dot"/>{previewExample ? 'Sample: Wireless Mouse · 325 EGP' : 'First selected/available Excel row'}</span>
-            <span><Move size={13}/> Click and drag any text field to move it</span>
+            <span className="preview-navigation"><button type="button" aria-label="Previous preview record" disabled={!previewRecords.length || previewIndex === 0} onClick={() => setPreviewIndex((n) => Math.max(0, n - 1))}><ChevronLeft size={15}/></button>
+              Record {previewRecords.length ? Math.min(previewIndex + 1, previewRecords.length) : 0} / {previewRecords.length}
+              <button type="button" aria-label="Next preview record" disabled={previewIndex + 1 >= previewRecords.length} onClick={() => setPreviewIndex((n) => n + 1)}><ChevronRight size={15}/></button>
+            </span>
           </div>
           {previewWarning && <div className="inline-warning preview-warning">
             <AlertCircle size={15}/> No printable values found. Choose the correct Excel column for each field.</div>}
+          {Boolean(sheet?.duplicateHeaders?.length) && <div className="inline-warning preview-warning"><AlertCircle size={15}/> Duplicate Excel headings detected: {sheet.duplicateHeaders.join(', ')}. Rename duplicate headings in Excel to avoid ambiguous bindings.</div>}
           {missing.length > 0 && <div className="inline-warning preview-warning">
             <AlertCircle size={15}/> Columns missing from this sheet: {missing.join(', ')}. Edit these fields in the left panel before printing.</div>}
         </section>
