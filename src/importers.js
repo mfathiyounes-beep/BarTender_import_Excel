@@ -43,9 +43,14 @@ export async function readSpreadsheet(file) {
   if (file.size > MAX_BYTES) throw new Error('File is larger than 15 MB. Split it into smaller files.');
   const extension = file.name.split('.').pop()?.toLowerCase();
 
-  if (extension === 'csv') {
+  if (extension === 'csv' || extension === 'tsv') {
     const contents = (await file.text()).replace(/^\uFEFF/, '');
-    const result = Papa.parse(contents, { skipEmptyLines: 'greedy', dynamicTyping: false });
+    // Keep blank lines for accurate original record numbering.
+    const result = Papa.parse(contents, {
+      delimiter: extension === 'tsv' ? '\t' : undefined,
+      skipEmptyLines: false,
+      dynamicTyping: false
+    });
     if (result.errors.length) {
       const err = result.errors[0];
       throw new Error('CSV error near row ' + (Number(err.row) + 1) + ': ' + err.message);
@@ -53,12 +58,12 @@ export async function readSpreadsheet(file) {
     const rows = result.data.slice(0, MAX_ROWS + 20)
       .map((cells) => cells.slice(0, MAX_COLUMNS).map((value) => String(value ?? '')));
     const sheet = normalizeTable(file.name, rows);
-    if (!sheet || !sheet.records.length) throw new Error('The CSV has no product rows.');
+    if (!sheet || !sheet.records.length) throw new Error('The delimited file has no product rows.');
     return [{ ...sheet, sourceRows: rows }];
   }
 
   if (extension !== 'xlsx') {
-    throw new Error('Only .xlsx and .csv are supported. Save legacy .xls files as .xlsx first.');
+    throw new Error('Only .xlsx, .csv and .tsv are supported. Save legacy .xls files as .xlsx first.');
   }
 
   const workbook = new ExcelJS.Workbook();
