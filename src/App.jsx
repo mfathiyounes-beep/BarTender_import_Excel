@@ -8,7 +8,7 @@ import {
 import { readSpreadsheet } from './importers.js';
 import { normalizeTable, guessMapping, totalLabels, makeBatch, PRINT_BATCH_SIZE } from './core.js';
 import {
-  DEFAULT_TEXT_TEMPLATE, EXAMPLE_HEADERS, EXAMPLE_ROW, TEMPLATE_STORAGE_KEY,
+  DEFAULT_TEXT_TEMPLATE, BUILTIN_TEMPLATES, EXAMPLE_HEADERS, EXAMPLE_ROW, TEMPLATE_STORAGE_KEY,
   headerKey, resolveColumnIndex, fieldText, missingColumns,
   printableTemplateRecords, sanitizeTemplate, generateTemplateId
 } from './templates.js';
@@ -30,7 +30,7 @@ function loadTemplates() {
     const stored = JSON.parse(localStorage.getItem(TEMPLATE_STORAGE_KEY) || '[]');
     if (!Array.isArray(stored)) return [];
     return stored.slice(0, 50).map(sanitizeTemplate).filter(Boolean)
-      .filter((item) => item.id !== DEFAULT_TEXT_TEMPLATE.id);
+      .filter((item) => !BUILTIN_TEMPLATES.some((builtin) => builtin.id === item.id));
   } catch { return []; }
 }
 
@@ -85,7 +85,8 @@ export default function App() {
   const sheet = sheets[sheetIndex] || null;
   const headers = sheet?.headers || EXAMPLE_HEADERS;
   const records = sheet?.records || [];
-  const templates = [DEFAULT_TEXT_TEMPLATE, ...savedTemplates];
+  const templates = [...BUILTIN_TEMPLATES, ...savedTemplates];
+  const isBuiltin = BUILTIN_TEMPLATES.some((item) => item.id === activeId);
   const field = draft.fields.find((item) => item.id === selectedFieldId) || null;
   const missing = sheet ? missingColumns(draft, sheet.headers) : [];
   const orderedRecords = useMemo(() => {
@@ -240,7 +241,7 @@ export default function App() {
   function saveTemplate() {
     const requested = String(draft.name || '').trim();
     if (!requested) return notify('error', 'Enter a template name first.');
-    const isDefault = activeId === DEFAULT_TEXT_TEMPLATE.id;
+    const isDefault = isBuiltin;
     const item = sanitizeTemplate({ ...draft, id: isDefault ? generateTemplateId() : activeId });
     if (isDefault && savedTemplates.length >= 50) return notify('error', 'Maximum 50 saved templates.');
     setSavedTemplates((previous) =>
@@ -267,7 +268,7 @@ export default function App() {
   }
 
   function deleteTemplate() {
-    if (activeId === DEFAULT_TEXT_TEMPLATE.id) return;
+    if (isBuiltin) return;
     const name = draft.name;
     if (!window.confirm('Delete saved template "' + name + '"?')) return;
     setSavedTemplates((previous) => previous.filter((item) => item.id !== activeId));
@@ -555,11 +556,11 @@ export default function App() {
             <input value={draft.name} maxLength={100} onChange={(e) => editDraft((current) => ({ ...current, name: e.target.value }))}/>
           </label>
           <div className="template-actions">
-            <ButtonIcon icon={Save} onClick={saveTemplate}>{activeId === DEFAULT_TEXT_TEMPLATE.id ? 'Save as new' : 'Save changes'}</ButtonIcon>
+            <ButtonIcon icon={Save} onClick={saveTemplate}>{isBuiltin ? 'Save as new' : 'Save changes'}</ButtonIcon>
             <ButtonIcon icon={Plus} onClick={duplicateTemplate}>Duplicate</ButtonIcon>
             <ButtonIcon icon={Download} onClick={exportTemplate}>Export</ButtonIcon>
             <ButtonIcon icon={FolderOpen} onClick={() => templateFileRef.current?.click()}>Import</ButtonIcon>
-            <ButtonIcon icon={Trash2} variant="danger" disabled={activeId === DEFAULT_TEXT_TEMPLATE.id} onClick={deleteTemplate}>Delete</ButtonIcon>
+            <ButtonIcon icon={Trash2} variant="danger" disabled={isBuiltin} onClick={deleteTemplate}>Delete</ButtonIcon>
           </div>
           <input ref={templateFileRef} className="hidden-input" type="file" accept=".json,application/json" onChange={(e) => importTemplate(e.target.files?.[0])}/>
           <p className="panel-hint template-tip">Saved templates remember Excel column names and the position of every text field. Export JSON to use them on another PC.</p>
