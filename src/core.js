@@ -7,9 +7,11 @@ export function normalizeTable(name, rows, chosenHeaderIndex = null) {
     ? chosenHeaderIndex
     : rows.findIndex((row) =>
       Array.isArray(row) && row.some((value) => String(value ?? '').trim()));
-  if (headIndex < 0) return null;
+  if (headIndex < 0 || headIndex >= rows.length) return null;
   const headRow = rows[headIndex] || [];
-  const width = Math.min(40, Math.max(headRow.length, 1));
+  // A blank header must not silently discard populated cells to its right.
+  const width = Math.min(40, Math.max(1, ...rows.slice(headIndex, headIndex + 201)
+    .map((row) => Array.isArray(row) ? row.length : 0)));
   const used = new Map();
   const headers = Array.from({ length: width }, (_, i) => {
     let title = String(headRow[i] ?? '').trim() || 'Column ' + (i + 1);
@@ -24,7 +26,11 @@ export function normalizeTable(name, rows, chosenHeaderIndex = null) {
       cells: Array.from({ length: width }, (_, c) => String(cells?.[c] ?? '').trim())
     }))
     .filter(({ cells }) => cells.some(Boolean));
-  return { name, headers, records, headerRow: headIndex + 1 };
+  const originalNames = headRow.slice(0, width).map((value) => String(value ?? '').trim().toLowerCase());
+  const duplicateHeaders = originalNames.filter((value, index) =>
+    value && originalNames.indexOf(value) !== index);
+  return { name, headers, records, headerRow: headIndex + 1,
+    duplicateHeaders: [...new Set(duplicateHeaders)] };
 }
 
 export function guessMapping(headers) {
@@ -52,9 +58,11 @@ export function cellValue(record, mappingIndex) {
 
 export function copyCount(record, mapping, useQuantity) {
   if (!useQuantity || mapping.quantity === '') return 1;
-  const str = cellValue(record, mapping.quantity);
+  const str = cellValue(record, mapping.quantity).trim();
+  // Never reinterpret "0" as one copy: that would print unwanted labels.
+  if (!str) return 0;
   const n = Number(str);
-  return Number.isSafeInteger(n) && n > 0 ? Math.min(n, 1000) : 1;
+  return Number.isSafeInteger(n) && n > 0 ? Math.min(n, 1000) : 0;
 }
 
 export function printableRecords(records, selected, mapping) {
