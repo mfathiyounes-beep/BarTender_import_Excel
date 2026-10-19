@@ -518,16 +518,16 @@ export default function App() {
       <aside className="sidebar template-sidebar">
         <section className="panel">
           <SectionHeader icon={UploadCloud} step="01">Import spreadsheet</SectionHeader>
-          <input className="hidden-input" ref={fileRef} type="file" accept=".xlsx,.csv" onChange={(e) => loadFile(e.target.files?.[0])}/>
+          <input className="hidden-input" ref={fileRef} type="file" accept=".xlsx,.csv,.tsv" onChange={(e) => loadFile(e.target.files?.[0])}/>
           <div className="upload-zone" role="button" tabIndex={0}
             onClick={() => fileRef.current?.click()}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileRef.current?.click(); }}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); loadFile(e.dataTransfer.files?.[0]); }}>
             <div className="upload-icon"><FileSpreadsheet size={25}/></div>
-            <strong>{importing ? 'Reading file…' : fileName || 'Drop .xlsx or .csv here'}</strong>
+            <strong>{importing ? 'Reading file…' : fileName || 'Drop .xlsx, .csv or .tsv here'}</strong>
             <span>Click to browse · Excel stays on your PC</span>
-            <div className="file-formats"><span>XLSX</span><span>CSV</span><span>NO SUBSCRIPTION</span></div>
+            <div className="file-formats"><span>XLSX</span><span>CSV</span><span>TSV</span></div>
           </div>
           <button type="button" className="sample-button" onClick={useExampleData}>
             Load example spreadsheet <ArrowRight size={14}/>
@@ -730,7 +730,7 @@ export default function App() {
             </tbody>
           </table></div>
           <div className="table-footer">
-            <span>{sheet ? 'Showing ' + Math.min(100, visibleRows.length) + ' of ' + visibleRows.length.toLocaleString() + ' matching rows · Scroll horizontally for all columns' : 'Import .xlsx or .csv to begin'}</span>
+            <span>{sheet ? 'Showing ' + Math.min(100, visibleRows.length) + ' of ' + visibleRows.length.toLocaleString() + ' matching rows · Scroll horizontally for all columns' : 'Import .xlsx, .csv or .tsv to begin'}</span>
             <span>{mappingSummary} dynamic columns mapped to label positions</span>
           </div>
         </section>
