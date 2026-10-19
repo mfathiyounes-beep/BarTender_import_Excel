@@ -47,7 +47,7 @@ export async function readSpreadsheet(file) {
     const contents = (await file.text()).replace(/^\uFEFF/, '');
     // Keep blank lines for accurate original record numbering.
     const result = Papa.parse(contents, {
-      delimiter: extension === 'tsv' ? '\t' : undefined,
+      delimiter: extension === 'tsv' ? '\t' : ',',
       skipEmptyLines: false,
       dynamicTyping: false
     });
