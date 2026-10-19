@@ -13,6 +13,40 @@ export const DEFAULT_TEXT_TEMPLATE = {
   ]
 };
 
+export const BUILTIN_TEMPLATES = [
+  DEFAULT_TEXT_TEMPLATE,
+  {
+    id: 'builtin-shelf',
+    name: 'Shelf / Stock label',
+    width: 70, height: 35,
+    fields: [
+      { id: 'shelf-title', type: 'text', label: 'Header', text: 'INVENTORY', x: 2, y: 2, width: 66, height: 5, fontSize: 10, bold: true, align: 'center' },
+      { id: 'shelf-name', type: 'column', label: 'Product name', columnKey: 'Product Name', x: 2, y: 9, width: 66, height: 12, fontSize: 18, bold: true, align: 'center' },
+      { id: 'shelf-price', type: 'column', label: 'Price', columnKey: 'Price', suffix: ' EGP', x: 2, y: 23, width: 66, height: 10, fontSize: 16, bold: true, align: 'center' }
+    ]
+  },
+  {
+    id: 'builtin-serial',
+    name: 'Serial number label',
+    width: 60, height: 25,
+    fields: [
+      { id: 'serial-title', type: 'column', label: 'Product name', columnKey: 'Product Name', x: 2, y: 2, width: 56, height: 8, fontSize: 13, bold: true, align: 'center' },
+      { id: 'serial-value', type: 'column', label: 'Serial', columnKey: 'Serial', prefix: 'SN: ', x: 2, y: 12, width: 56, height: 9, fontSize: 14, bold: true, align: 'center' }
+    ]
+  },
+  {
+    id: 'builtin-address',
+    name: 'Shipping address',
+    width: 100, height: 60,
+    fields: [
+      { id: 'address-label', type: 'text', label: 'Title', text: 'SHIP TO', x: 4, y: 3, width: 92, height: 7, fontSize: 14, bold: true, align: 'left' },
+      { id: 'address-recipient', type: 'column', label: 'Recipient', columnKey: 'Recipient', x: 4, y: 13, width: 92, height: 10, fontSize: 18, bold: true, align: 'left' },
+      { id: 'address-street', type: 'column', label: 'Address', columnKey: 'Address', x: 4, y: 26, width: 92, height: 17, fontSize: 14, bold: false, align: 'left' },
+      { id: 'address-city', type: 'column', label: 'City', columnKey: 'City', x: 4, y: 46, width: 92, height: 9, fontSize: 13, bold: true, align: 'left' }
+    ]
+  }
+];
+
 export const EXAMPLE_HEADERS = ['Product Name', 'Barcode', 'Price', 'Quantity', 'Description'];
 export const EXAMPLE_ROW = { id: 'example', cells: ['Wireless Mouse', '987654321098', '325', '1', '2.4 GHz'] };
 
