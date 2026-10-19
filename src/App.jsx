@@ -150,6 +150,28 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    function nudgeSelectedField(event) {
+      if (!selectedFieldId || event.ctrlKey || event.metaKey || event.altKey) return;
+      const offsets = { ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+        ArrowUp: [0, -1], ArrowDown: [0, 1] };
+      const offset = offsets[event.key];
+      if (!offset || event.target?.closest?.('input, select, textarea, button, [contenteditable="true"]')) return;
+      const target = draft.fields.find((entry) => entry.id === selectedFieldId);
+      if (!target) return;
+      event.preventDefault();
+      const distance = event.shiftKey ? 5 : 0.5;
+      editDraft((old) => ({
+        ...old,
+        fields: old.fields.map((entry) => entry.id !== selectedFieldId ? entry :
+          moveField(entry, offset[0] * distance, offset[1] * distance,
+            old.width, old.height, snapToGrid ? 5 : 0.5))
+      }));
+    }
+    window.addEventListener('keydown', nudgeSelectedField);
+    return () => window.removeEventListener('keydown', nudgeSelectedField);
+  }, [selectedFieldId, draft, snapToGrid]);
+
+  useEffect(() => {
     function keyboardShortcut(event) {
       if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
       const key = event.key.toLowerCase();
@@ -756,7 +778,22 @@ export default function App() {
           </div><span className="dimension-badge">{draft.width} × {draft.height} mm</span></div>
           <div className={'preview-canvas text-preview-area ' + (showGrid ? 'preview-grid' : '')}>
             <style>{textLabelStyles}</style>
-            <div className="preview-paper text-preview-paper" ref={canvasRef}
+            <div className="ruler-layout" style={{
+              gridTemplateColumns: '26px ' + (draft.width * pxPerMm * previewScale) + 'px',
+              gridTemplateRows: '24px ' + (draft.height * pxPerMm * previewScale) + 'px'
+            }}>
+              <div className="ruler-corner">mm</div>
+              <div className="ruler-top" aria-label="Horizontal ruler in millimeters">
+                {Array.from({ length: Math.floor(draft.width / 10) + 1 }, (_, index) =>
+                  <span className="ruler-mark ruler-mark-top" key={index}
+                    style={{ left: index * 10 * pxPerMm * previewScale }}>{index * 10}</span>)}
+              </div>
+              <div className="ruler-left" aria-label="Vertical ruler in millimeters">
+                {Array.from({ length: Math.floor(draft.height / 10) + 1 }, (_, index) =>
+                  <span className="ruler-mark ruler-mark-left" key={index}
+                    style={{ top: index * 10 * pxPerMm * previewScale }}>{index * 10}</span>)}
+              </div>
+              <div className="preview-paper text-preview-paper" ref={canvasRef}
               style={{ width: draft.width * pxPerMm * previewScale, height: draft.height * pxPerMm * previewScale }}
               onPointerDown={pointerDown} onPointerMove={pointerMove}
               onPointerUp={pointerUp} onPointerCancel={pointerUp}>
@@ -775,10 +812,11 @@ export default function App() {
                   top: (field.y + field.height) * pxPerMm * previewScale }}>
                 <span aria-hidden="true"/>
               </button>}
+              </div>
             </div>
           </div>
           <div className="preview-bottom">
-            <span><span className="live-dot"/>{previewExample ? 'Sample: Wireless Mouse · 325 EGP' : 'First selected/available Excel row'}</span>
+            <span><span className="live-dot"/>{previewExample ? 'Sample: Wireless Mouse · 325 EGP' : 'Use arrow keys to move selected text · Shift = 5 mm'}</span>
             <span className="preview-navigation"><button type="button" aria-label="Previous preview record" disabled={!previewRecords.length || previewIndex === 0} onClick={() => setPreviewIndex((n) => Math.max(0, n - 1))}><ChevronLeft size={15}/></button>
               Record {previewRecords.length ? Math.min(previewIndex + 1, previewRecords.length) : 0} / {previewRecords.length}
               <button type="button" aria-label="Next preview record" disabled={previewIndex + 1 >= previewRecords.length} onClick={() => setPreviewIndex((n) => n + 1)}><ChevronRight size={15}/></button>
