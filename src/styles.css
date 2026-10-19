@@ -223,3 +223,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,.upload-zone:focus
 /* Canvas overlay; visible over the rendered white label rather than behind it. */
 .preview-grid .text-preview-paper{position:relative;background:#fff}
 .preview-grid .text-preview-paper::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;background-image:linear-gradient(to right,#269f9e35 1px,transparent 1px),linear-gradient(to bottom,#269f9e35 1px,transparent 1px);background-size:calc(5mm * 96 / 25.4) calc(5mm * 96 / 25.4)}
+
+.column-sort{border:0;background:transparent;color:inherit;text-transform:inherit;font-size:inherit;letter-spacing:inherit;font-weight:inherit;display:inline-flex;align-items:center;gap:5px;padding:2px 0;white-space:nowrap}
+.column-sort:hover{color:#119a8d}
+.column-sort svg{opacity:.65}
