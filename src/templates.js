@@ -25,9 +25,10 @@ export function resolveColumnIndex(headers, field) {
   if (field?.type !== 'column' || !Array.isArray(headers)) return -1;
   const wanted = headerKey(field.columnKey);
   if (wanted) {
-    const exact = headers.findIndex((name) => headerKey(name) === wanted);
-    if (exact >= 0) return exact;
+    // Saved bindings are exact: never silently print an unrelated field.
+    return headers.findIndex((name) => headerKey(name) === wanted);
   }
+  // Legacy templates with no explicit header may still use auto-guessing.
   if (field.autoField) {
     const guessed = guessMapping(headers)[field.autoField];
     if (guessed !== '' && guessed !== undefined) return Number(guessed);
@@ -53,6 +54,7 @@ export function printableTemplateRecords(records, selected, template, headers) {
   return records.filter((record) => template.fields.length > 0 && selected.has(record.id) &&
     record.cells.some((value) => String(value).trim()) &&
     (template.fields.some((field) => field.type === 'column' && fieldText(field, headers, record).trim()) ||
+    template.fields.some((field) => field.type === 'text' && String(field.text || '').trim()) ||
     !template.fields.some((field) => field.type === 'column')));
 }
 
@@ -85,6 +87,12 @@ export function sanitizeTemplate(candidate) {
       height: finiteClamp(src.height, 1, height - y, 5),
       fontSize: finiteClamp(src.fontSize, 6, 36, 12),
       bold: Boolean(src.bold),
+      italic: Boolean(src.italic),
+      underline: Boolean(src.underline),
+      fontFamily: ['Arial', 'Tahoma', 'Segoe UI', 'Consolas', 'Times New Roman'].includes(src.fontFamily)
+        ? src.fontFamily : 'Arial',
+      wrap: src.wrap !== false,
+      rotation: [0, 90, 180, 270].includes(Number(src.rotation)) ? Number(src.rotation) : 0,
       align: ['left', 'center', 'right'].includes(src.align) ? src.align : 'center'
     };
   });
