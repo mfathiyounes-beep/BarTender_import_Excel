@@ -56,3 +56,7 @@ Split App into document manager, toolbox/layers, canvas engine, properties inspe
 
 ## Compatibility
 Windows 10/11 planned; Node.js required for **building**, not for installed EXE. Packaging configured for NSIS installer and portable EXE but is not verified until local build/CI succeeds. BarTender `.btw` files are proprietary and not imported.
+
+
+## PDF export path (source-implemented)
+An explicit user click sends the current bounded batch of label HTML through `label:export-pdf` IPC. The main process uses the same validation as print, displays a native Save dialog, loads transient local print HTML in a sandboxed hidden window and calls `webContents.printToPDF` at `widthMm/25.4` × `heightMm/25.4` inches with `preferCSSPageSize`. It writes only the destination the user chose and cleans up the temporary HTML. PDF output and print-calibration tests remain pending.
