@@ -227,3 +227,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,.upload-zone:focus
 .column-sort{border:0;background:transparent;color:inherit;text-transform:inherit;font-size:inherit;letter-spacing:inherit;font-weight:inherit;display:inline-flex;align-items:center;gap:5px;padding:2px 0;white-space:nowrap}
 .column-sort:hover{color:#119a8d}
 .column-sort svg{opacity:.65}
+
+/* Editor-only selection and resize handles. Never included in printed label HTML. */
+.canvas-selection{position:absolute;z-index:5;pointer-events:none;box-sizing:border-box;border:1.5px dashed #0d9f92;background:#16ac9b06}
+.canvas-resize-handle{position:absolute;z-index:7;transform:translate(-50%,-50%);padding:0;width:16px;height:16px;border:2px solid #fff;border-radius:4px;background:#0b988d;box-shadow:0 0 0 1px #0b847a,0 2px 8px #0003;cursor:nwse-resize;touch-action:none}
+.canvas-resize-handle:hover{background:#037971}
+.canvas-resize-handle span{display:block;height:6px;width:6px;margin:auto;border-right:1px solid white;border-bottom:1px solid white}
+.canvas-resize-handle:focus-visible{outline:3px solid #a8f3e7;outline-offset:2px}
