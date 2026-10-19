@@ -3,7 +3,7 @@ import {
   FileSpreadsheet, UploadCloud, Printer, Search, Settings2, CheckCircle2,
   AlertCircle, ChevronLeft, ChevronRight, LayoutTemplate, Table2,
   ShieldCheck, Eye, ArrowRight, Info, Plus, Save, Trash2,
-  Download, FolderOpen, Move, Type, Columns3, Undo2, Redo2, ZoomIn, ZoomOut, Grid2X2
+  Download, FolderOpen, Move, Type, Columns3, Undo2, Redo2, ZoomIn, ZoomOut, Grid2X2, ArrowDownUp
 } from 'lucide-react';
 import { readSpreadsheet } from './importers.js';
 import { normalizeTable, guessMapping, totalLabels, makeBatch, PRINT_BATCH_SIZE } from './core.js';
@@ -71,6 +71,8 @@ export default function App() {
   const [selectedFieldId, setSelectedFieldId] = useState('product');
   const [selection, setSelection] = useState(new Set());
   const [query, setQuery] = useState('');
+  const [sortColumn, setSortColumn] = useState(null);
+  const [sortDirection, setSortDirection] = useState('asc');
   const [notice, setNotice] = useState(null);
   const [importing, setImporting] = useState(false);
   const [printing, setPrinting] = useState(false);
@@ -86,15 +88,24 @@ export default function App() {
   const templates = [DEFAULT_TEXT_TEMPLATE, ...savedTemplates];
   const field = draft.fields.find((item) => item.id === selectedFieldId) || null;
   const missing = sheet ? missingColumns(draft, sheet.headers) : [];
+  const orderedRecords = useMemo(() => {
+    if (!Number.isInteger(sortColumn)) return records;
+    return [...records].sort((left, right) => {
+      const a = String(left.cells[sortColumn] ?? '');
+      const b = String(right.cells[sortColumn] ?? '');
+      const result = a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+      return sortDirection === 'asc' ? result : -result;
+    });
+  }, [records, sortColumn, sortDirection]);
   const visibleRows = useMemo(() => {
     const search = query.trim().toLocaleLowerCase();
-    if (!search) return records;
-    return records.filter((row) => row.cells.some((cell) =>
+    if (!search) return orderedRecords;
+    return orderedRecords.filter((row) => row.cells.some((cell) =>
       String(cell).toLocaleLowerCase().includes(search)));
-  }, [records, query]);
+  }, [orderedRecords, query]);
   const printable = useMemo(() =>
-    sheet ? printableTemplateRecords(records, selection, draft, sheet.headers) : [],
-    [records, selection, draft, sheet]);
+    sheet ? printableTemplateRecords(orderedRecords, selection, draft, sheet.headers) : [],
+    [orderedRecords, selection, draft, sheet]);
   const qtyIndex = sheet && useQuantities
     ? sheet.headers.findIndex((h) => headerKey(h) === headerKey(quantityColumn)) : -1;
   const qtyMapping = { quantity: qtyIndex < 0 ? '' : String(qtyIndex) };
@@ -308,6 +319,7 @@ export default function App() {
     setFileName(name);
     setSelection(new Set(data[0].records.map((row) => row.id)));
     setQuery('');
+    setSortColumn(null);
     const guessed = guessMapping(data[0].headers).quantity;
     setQuantityColumn(guessed === '' ? '' : data[0].headers[Number(guessed)]);
     notify('success', 'Imported ' + data.reduce((n, s) => n + s.records.length, 0) +
@@ -338,6 +350,7 @@ export default function App() {
     const guessed = guessMapping(next.headers).quantity;
     setQuantityColumn(guessed === '' ? '' : next.headers[Number(guessed)]);
     setQuery('');
+    setSortColumn(null);
   }
 
   function chooseHeaderRow(rowNumber) {
@@ -346,8 +359,14 @@ export default function App() {
     setSheets((previous) => previous.map((item, index) =>
       index === sheetIndex ? { ...updated, sourceRows: sheet.sourceRows } : item));
     setSelection(new Set(updated.records.map((row) => row.id)));
+    setSortColumn(null);
     const guessed = guessMapping(updated.headers).quantity;
     setQuantityColumn(guessed === '' ? '' : updated.headers[Number(guessed)]);
+  }
+
+  function toggleSort(index) {
+    if (sortColumn === index) setSortDirection((dir) => dir === 'asc' ? 'desc' : 'asc');
+    else { setSortColumn(index); setSortDirection('asc'); }
   }
 
   function toggleVisible() {
@@ -694,7 +713,10 @@ export default function App() {
           <div className="table-overflow"><table className="data-table wide-sheet-table">
             <thead><tr>
               <th className="check-col"><input type="checkbox" aria-label="Select visible rows" checked={visibleSelected} disabled={!visibleRows.length} onChange={toggleVisible}/></th>
-              <th>Row</th>{headers.map((header, i) => <th key={i}>{header}</th>)}
+              <th>Row</th>{headers.map((header, i) =>
+                <th key={i}><button className="column-sort" type="button" onClick={() => toggleSort(i)} title={'Sort by ' + header}>
+                  {header}<ArrowDownUp size={12}/>{sortColumn === i && (sortDirection === 'asc' ? '↑' : '↓')}
+                </button></th>)}
             </tr></thead>
             <tbody>{!sheet ? <tr><td colSpan={headers.length + 2}>
               <div className="empty-table"><FileSpreadsheet size={26}/><strong>Preview shown above uses example values.</strong><span>Import Excel to see your real rows and column headers here.</span></div>
