@@ -58,7 +58,13 @@ export default function App() {
   const [sheets, setSheets] = useState([]);
   const [fileName, setFileName] = useState('');
   const [sheetIndex, setSheetIndex] = useState(0);
-  const [initialLibrary] = useState(() => readTemplateLibrary(window.localStorage));
+  const [initialLibrary] = useState(() => {
+    try { return readTemplateLibrary(window.localStorage); }
+    catch (error) {
+      return { templates: [], blocked: true, recovered: false,
+        warning: 'Local template storage is inaccessible: ' + (error?.message || 'Storage error') };
+    }
+  });
   const [savedTemplates, setSavedTemplates] = useState(() => initialLibrary.templates);
   const [storageBlocked, setStorageBlocked] = useState(() => initialLibrary.blocked);
   const [activeId, setActiveId] = useState(DEFAULT_TEXT_TEMPLATE.id);
@@ -85,6 +91,7 @@ export default function App() {
   const isBuiltin = BUILTIN_TEMPLATES.some((item) => item.id === activeId);
   const field = draft.fields.find((item) => item.id === selectedFieldId) || null;
   const missing = sheet ? missingColumns(draft, sheet.headers) : [];
+  const duplicateHeaders = sheet?.duplicateHeaders || [];
   const orderedRecords = useMemo(() => {
     if (!Number.isInteger(sortColumn)) return records;
     return [...records].sort((left, right) => {
@@ -107,6 +114,7 @@ export default function App() {
     ? sheet.headers.findIndex((h) => headerKey(h) === headerKey(quantityColumn)) : -1;
   const qtyMapping = { quantity: qtyIndex < 0 ? '' : String(qtyIndex) };
   const total = totalLabels(printable, qtyMapping, useQuantities && qtyIndex >= 0);
+  const canPrint = Boolean(sheet && !printing && !missing.length && !duplicateHeaders.length && total > 0);
   const batchRows = makeBatch(printable, qtyMapping, useQuantities && qtyIndex >= 0, batchStart);
   const batches = Math.max(1, Math.ceil(total / PRINT_BATCH_SIZE));
   const currentBatch = total > 0 ? Math.floor(Math.min(batchStart, total - 1) / PRINT_BATCH_SIZE) + 1 : 1;
@@ -140,7 +148,7 @@ export default function App() {
       if (key === 'o') { event.preventDefault(); fileRef.current?.click(); return; }
       if (key === 'p') {
         event.preventDefault();
-        if (sheet && total && !missing.length && !printing) void printBatch();
+        if (canPrint) void printBatch();
         return;
       }
       const inInput = event.target?.closest?.('input, textarea, select, [contenteditable="true"]');
@@ -154,7 +162,7 @@ export default function App() {
     }
     window.addEventListener('keydown', keyboardShortcut);
     return () => window.removeEventListener('keydown', keyboardShortcut);
-  }, [draft, sheet, total, printing, missing, historyVersion]);
+  }, [draft, sheet, total, printing, missing, duplicateHeaders, historyVersion]);
 
   const notify = (type, text) => setNotice({ type, text });
 
@@ -487,7 +495,7 @@ export default function App() {
 
   async function exportPDF() {
     if (!window.labelDesktop?.exportPDF) return notify('error', 'PDF export is available in the Windows desktop app.');
-    if (!sheet || !batchRows.length || missing.length) return notify('error', 'Import Excel and resolve missing field mappings first.');
+    if (!canPrint || !batchRows.length) return notify('error', 'Import data and fix missing or duplicate headings before exporting.');
     setPrinting(true);
     try {
       const html = textPrintDocument(batchRows.map((row) =>
@@ -502,6 +510,7 @@ export default function App() {
 
   async function printBatch() {
     if (!sheet || !batchRows.length) return notify('error', 'Select rows with data for at least one mapped label field.');
+    if (duplicateHeaders.length) return notify('error', 'Rename repeated Excel headings before printing: ' + duplicateHeaders.join(', '));
     if (missing.length) return notify('error', 'Fix missing Excel columns: ' + missing.join(', '));
     setPrinting(true);
     try {
@@ -527,7 +536,7 @@ export default function App() {
       <div className="topbar-actions">
         <span className="offline-pill"><span className="offline-dot"/> TEXT-ONLY LABELS</span>
         <button className="button button-primary top-print" onClick={printBatch}
-          disabled={!printable.length || missing.length > 0 || printing}>
+          disabled={!canPrint}>
           <Printer size={17}/>{printing ? 'Printing…' : 'Print labels'}<ArrowRight size={16}/>
         </button>
       </div>
@@ -564,8 +573,8 @@ export default function App() {
         <MenuAction onClick={useExampleData}>Open sample data</MenuAction>
       </div></details>
       <details><summary>Print</summary><div className="desktop-menu-popover">
-        <MenuAction onClick={printBatch} disabled={!sheet || !total || missing.length > 0 || printing}>Print current batch…</MenuAction>
-        <MenuAction onClick={exportPDF} disabled={!window.labelDesktop?.exportPDF || !sheet || !total || missing.length > 0 || printing}>Export current batch as PDF…</MenuAction>
+        <MenuAction onClick={printBatch} disabled={!canPrint}>Print current batch…</MenuAction>
+        <MenuAction onClick={exportPDF} disabled={!window.labelDesktop?.exportPDF || !canPrint}>Export current batch as PDF…</MenuAction>
       </div></details>
     </nav>
 
@@ -767,7 +776,7 @@ export default function App() {
           </div>
           {previewWarning && <div className="inline-warning preview-warning">
             <AlertCircle size={15}/> No printable values found. Choose the correct Excel column for each field.</div>}
-          {Boolean(sheet?.duplicateHeaders?.length) && <div className="inline-warning preview-warning"><AlertCircle size={15}/> Duplicate Excel headings detected: {sheet.duplicateHeaders.join(', ')}. Rename duplicate headings in Excel to avoid ambiguous bindings.</div>}
+          {Boolean(duplicateHeaders.length) && <div className="inline-warning preview-warning" role="alert"><AlertCircle size={15}/> Printing blocked: duplicate Excel headings ({duplicateHeaders.join(', ')}). Rename repeated column headers and import again to avoid ambiguous label values.</div>}
           {missing.length > 0 && <div className="inline-warning preview-warning">
             <AlertCircle size={15}/> Columns missing from this sheet: {missing.join(', ')}. Edit these fields in the left panel before printing.</div>}
         </section>
@@ -830,10 +839,10 @@ export default function App() {
             <button type="button" title="Next batch" disabled={batchStart + PRINT_BATCH_SIZE >= total} onClick={() => setBatchStart((n) => n + PRINT_BATCH_SIZE)}><ChevronRight size={18}/></button>
             <small>{total ? Math.min(batchStart + 1, total) + '–' + Math.min(batchStart + PRINT_BATCH_SIZE, total) + ' of ' + total : 'No labels selected'}</small>
           </div><div className="print-action-group">
-            {Boolean(window.labelDesktop?.exportPDF) && <button type="button" className="button button-outline" disabled={!sheet || !total || missing.length > 0 || printing} onClick={exportPDF}>
+            {Boolean(window.labelDesktop?.exportPDF) && <button type="button" className="button button-outline" disabled={!canPrint} onClick={exportPDF}>
               <Download size={17}/> Export PDF
             </button>}
-            <button type="button" className="button button-primary print-final" disabled={!sheet || !total || missing.length > 0 || printing} onClick={printBatch}>
+            <button type="button" className="button button-primary print-final" disabled={!canPrint} onClick={printBatch}>
               <Printer size={18}/>{printing ? 'Preparing…' : 'Print ' + batchRows.length + ' labels'}<ArrowRight size={16}/>
             </button>
           </div></div>
