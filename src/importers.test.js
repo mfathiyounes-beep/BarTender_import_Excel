@@ -59,3 +59,17 @@ test('rejects unsupported workbook formats and oversized files', async () => {
   await assert.rejects(() => readSpreadsheet({ name: 'data.xls', size: 100 }), /Only .xlsx and .csv/);
   await assert.rejects(() => readSpreadsheet({ name: 'big.csv', size: 20 * 1024 * 1024 }), /15 MB/);
 });
+
+test('CSV row numbers remain anchored to physical input lines containing blanks', async () => {
+  const source = 'Name,Price\nMouse,20\n\nCable,10\n';
+  const file = { name: 'rows.csv', size: source.length, text: async () => source };
+  const [sheet] = await readSpreadsheet(file);
+  assert.deepEqual(sheet.records.map((r) => r.id), ['2', '4']);
+});
+test('tab-separated UTF-8 data supports Arabic text', async () => {
+  const source = 'Name\tPrice\nلوحة مفاتيح\t325\n';
+  const file = { name: 'arabic.tsv', size: source.length, text: async () => source };
+  const [sheet] = await readSpreadsheet(file);
+  assert.equal(sheet.records[0].cells[0], 'لوحة مفاتيح');
+  assert.equal(sheet.records[0].cells[1], '325');
+});
