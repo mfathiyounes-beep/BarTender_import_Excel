@@ -1,9 +1,9 @@
 {
   "name": "excel-label-studio",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Offline Excel to barcode label printer for Windows",
+  "description": "Offline, reusable Excel-to-text label template designer and Windows printer",
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -12,14 +12,12 @@
     "test": "node --test",
     "desktop": "npm run build && electron .",
     "desktop:dev": "concurrently -k \"npm:dev\" \"wait-on http://127.0.0.1:5173 && cross-env ELECTRON_START_URL=http://127.0.0.1:5173 electron .\"",
-    "dist:win": "npm run build && electron-builder --win nsis --publish never"
+    "dist:win": "npm run build && electron-builder --win nsis portable --publish never"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
-    "jsbarcode": "^3.12.1",
     "lucide-react": "^0.468.0",
     "papaparse": "^5.5.3",
-    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
