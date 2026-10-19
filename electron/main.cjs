@@ -76,7 +76,7 @@ ipcMain.handle('label:print', async (event, payload) => {
   try {
     await fs.writeFile(temporaryPath, html, { encoding: 'utf8', flag: 'wx' });
     printWindow = new BrowserWindow({
-      width: 800, height: 700, show: false,
+      width: 800, height: 700, show: !printerName,
       webPreferences: { sandbox: true, nodeIntegration: false, contextIsolation: true }
     });
     printWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
