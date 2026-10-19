@@ -14,6 +14,7 @@ import {
 } from './templates.js';
 import { renderTextLabel, textPrintDocument, textLabelStyles, browserPrint } from './text-print.js';
 import { readTemplateLibrary, writeTemplateLibrary, validateLibraryImport, exportTemplateLibrary } from './template-library.js';
+import { moveField, resizeField } from './editor-geometry.js';
 import './styles.css';
 
 const EXAMPLE_ROWS = [
@@ -52,6 +53,7 @@ export default function App() {
   const [historyVersion, setHistoryVersion] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [showGrid, setShowGrid] = useState(false);
+  const [snapToGrid, setSnapToGrid] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [sheets, setSheets] = useState([]);
   const [fileName, setFileName] = useState('');
@@ -438,19 +440,24 @@ export default function App() {
   }
 
   function pointerDown(event) {
-    const element = event.target.closest('[data-field-id]');
+    const handle = event.target.closest('[data-resize-field]');
+    const element = handle || event.target.closest('[data-field-id]');
     if (!element || !canvasRef.current) return;
-    const id = element.getAttribute('data-field-id');
+    const id = handle ? handle.getAttribute('data-resize-field') : element.getAttribute('data-field-id');
     const targetField = draft.fields.find((item) => item.id === id);
     if (!targetField) return;
     event.preventDefault();
     setSelectedFieldId(id);
+    // One snapshot per gesture; pointer movements don't flood undo history.
     snapshot();
     dragRef.current = {
       pointerId: event.pointerId, id,
+      mode: handle ? 'resize' : 'move',
       startX: event.clientX, startY: event.clientY,
-      x: targetField.x, y: targetField.y,
-      scale: previewScale
+      initial: { ...targetField },
+      scale: previewScale,
+      pageWidth: draft.width, pageHeight: draft.height,
+      snap: snapToGrid ? 5 : 0.5
     };
     canvasRef.current.setPointerCapture(event.pointerId);
   }
@@ -460,13 +467,12 @@ export default function App() {
     if (!dragging || dragging.pointerId !== event.pointerId) return;
     const dx = (event.clientX - dragging.startX) / (pxPerMm * dragging.scale);
     const dy = (event.clientY - dragging.startY) / (pxPerMm * dragging.scale);
+    const adjusted = dragging.mode === 'resize'
+      ? resizeField(dragging.initial, dx, dy, dragging.pageWidth, dragging.pageHeight, dragging.snap)
+      : moveField(dragging.initial, dx, dy, dragging.pageWidth, dragging.pageHeight, dragging.snap);
     setDraft((previous) => sanitizeTemplate({
       ...previous,
-      fields: previous.fields.map((item) => item.id !== dragging.id ? item : {
-        ...item,
-        x: Math.round(bounded(dragging.x + dx, 0, previous.width - item.width) * 2) / 2,
-        y: Math.round(bounded(dragging.y + dy, 0, previous.height - item.height) * 2) / 2
-      })
+      fields: previous.fields.map((item) => item.id === dragging.id ? adjusted : item)
     }));
     setDirty(true);
   }
@@ -544,6 +550,7 @@ export default function App() {
       </div></details>
       <details><summary>View</summary><div className="desktop-menu-popover">
         <MenuAction onClick={() => setShowGrid((v) => !v)}>{showGrid ? 'Hide' : 'Show'} grid</MenuAction>
+        <MenuAction onClick={() => setSnapToGrid((v) => !v)}>{snapToGrid ? 'Disable' : 'Enable'} 5 mm snapping</MenuAction>
         <MenuAction onClick={() => setZoom((v) => Math.min(2, v + .25))}>Zoom in</MenuAction>
         <MenuAction onClick={() => setZoom((v) => Math.max(.5, v - .25))}>Zoom out</MenuAction>
         <MenuAction onClick={() => setZoom(1)}>Actual zoom (100%)</MenuAction>
@@ -710,6 +717,7 @@ export default function App() {
           <button type="button" title="Redo" disabled={!historyRef.current.future.length} onClick={redoDraft}><Redo2 size={16}/> Redo</button>
           <span className="toolbar-separator"/>
           <button type="button" className={showGrid ? 'toolbar-selected' : ''} onClick={() => setShowGrid((v) => !v)} aria-pressed={showGrid}><Grid2X2 size={16}/> Grid</button>
+          <button type="button" className={snapToGrid ? 'toolbar-selected' : ''} onClick={() => setSnapToGrid((v) => !v)} aria-pressed={snapToGrid}>Snap 5 mm</button>
           <span className="toolbar-separator"/>
           <button type="button" aria-label="Zoom out" disabled={zoom <= .5} onClick={() => setZoom((n) => Math.max(.5, Math.round((n - .25) * 100) / 100))}><ZoomOut size={16}/></button>
           <span className="zoom-label">{Math.round(zoom * 100)}%</span>
@@ -735,6 +743,19 @@ export default function App() {
               onPointerUp={pointerUp} onPointerCancel={pointerUp}>
               <div className="preview-scaled" style={{ transform: 'scale(' + previewScale + ')', transformOrigin: 'top left' }}
                 dangerouslySetInnerHTML={{ __html: previewHtml }}/>
+              {field && <div className="canvas-selection" aria-hidden="true" style={{
+                left: field.x * pxPerMm * previewScale,
+                top: field.y * pxPerMm * previewScale,
+                width: field.width * pxPerMm * previewScale,
+                height: field.height * pxPerMm * previewScale
+              }}/>}
+              {field && <button type="button" className="canvas-resize-handle"
+                data-resize-field={field.id} title={'Resize ' + field.label}
+                aria-label={'Resize ' + field.label}
+                style={{ left: (field.x + field.width) * pxPerMm * previewScale,
+                  top: (field.y + field.height) * pxPerMm * previewScale }}>
+                <span aria-hidden="true"/>
+              </button>}
             </div>
           </div>
           <div className="preview-bottom">
