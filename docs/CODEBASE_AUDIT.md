@@ -2,7 +2,7 @@
 Date: 2026-10-19. Repository: `yousseffekryk98-droid/BarTender_import_Excel`, branch `main`.
 
 ## Executive summary
-Small, offline-oriented React/Vite + Electron application, optimized for **Excel/CSV text-only labels**. This is not a BarTender replacement at Professional/Automation feature parity. Source implementations exist for importing .xlsx and .csv, single-sheet selection, fixed/Excel text positions, editable template JSON in localStorage, 100-label print batches and Windows printer enumeration/printing. Real Windows printing, packaging, E2E UI behavior and full security audit have **not** passed verification.
+Small, offline-oriented React/Vite + Electron application, optimized for **Excel/CSV text-only labels**. This is not a BarTender replacement at Professional/Automation feature parity. Source implementations exist for importing  .xlsx, .csv and .tsv, multi-sheet selection, fixed/Excel text positions, editable template JSON in localStorage, 100-label print batches and Windows printer enumeration/printing. Real Windows printing, packaging, E2E UI behavior and full security audit have **not** passed verification.
 
 ## File-by-file inventory (reviewed)
 - `package.json` — Vite/Electron deps, two Windows build targets (NSIS/portable), no lockfile committed.
@@ -53,3 +53,13 @@ npm run desktop:dev
 npm run dist:win
 ```
 On EXE failure inspect full PowerShell output; expected binaries under `release/` only after builder success. Test a single 50×30 mm label before production runs. Keep import samples synthetic; never upload private spreadsheets in bug reports without redaction.
+
+
+## Follow-up implementation (same audit session)
+- Added native Windows PDF export using Electron's `webContents.printToPDF` and Save dialog; uses label page dimensions in inches and `preferCSSPageSize` to align with mm stylesheet. This is **source-implemented and NOT runtime-verified**.
+- Added user-selectable sorting to Excel table; print records follow the same chosen ordering.
+- Added built-in shelf, serial-number and address text templates with safe save-as behavior.
+- Added functional desktop menu and keyboard shortcuts, more text formatting and a visible grid overlay.
+- Added TSV import, with blank line preservation for source-row numbering.
+- Removed unused React refresh plugin, switching to native Vite JSX transform for `script-src 'self'`.
+- Offline test harness: 17 isolated tests from `src/core.test.js` and `src/templates.test.js` passed by evaluating dependency-free source. This is **not** a substitute for `npm test` on Node with project dependencies, React build, Electron E2E or a real printer.
