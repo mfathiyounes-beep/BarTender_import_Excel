@@ -56,7 +56,7 @@ test('re-selecting header row recovers Excel tables with a report title above he
 });
 
 test('rejects unsupported workbook formats and oversized files', async () => {
-  await assert.rejects(() => readSpreadsheet({ name: 'data.xls', size: 100 }), /Only .xlsx and .csv/);
+  await assert.rejects(() => readSpreadsheet({ name: 'data.xls', size: 100 }), /Only .xlsx, .csv and .tsv/);
   await assert.rejects(() => readSpreadsheet({ name: 'big.csv', size: 20 * 1024 * 1024 }), /15 MB/);
 });
 
