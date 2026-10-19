@@ -31,7 +31,7 @@ Audit date: 2026-10-19
 | Print-time data entry forms | Tier detail unverified | Tier detail unverified | Advertised | MISSING | Form builder, validated prompts | P2 | Input-required print path |
 | Label templates from data values | Tier detail unverified | Dynamic data advertised | Dynamic data advertised | PARTIAL | One template per print job, no conditional layout variation | P2 | Conditional template E2E |
 | Printing history/reprint | Feature matrix, tier unclear | Unverified | Unverified | MISSING | Need persisted job model | P1 | Cancel/reprint/recovery |
-| Print to PDF | Feature matrix lists native PDF for some tiers; tier unclear | Unverified | Unverified | MISSING | Can use OS printer dialog; no built-in export API | P1 | Multi-page PDF physical size |
+| Print to PDF | Feature matrix lists native PDF for some tiers; tier unclear | Unverified | Unverified | CODE-IMPLEMENTED | Native Electron PDF export; Windows runtime not verified | P1 | Multi-page PDF physical size |
 | REST API / File Drop | Not in Starter marketing | Not in Professional marketing | Confirmed | MISSING | Must be opt-in, localhost authenticated, path sandbox | P3 | Security and file watcher tests |
 | Local automation rules/queues | Not in Starter marketing | Not in Professional marketing | Automation marketed | MISSING | Scheduler, retries, job queue, audit | P3 | State-machine and failure tests |
 | Remote/cloud printing, centralized roles, audit | Enterprise/cloud-dependent | Unverified | Unverified | NOT APPLICABLE | Not a single-PC local core need; opt-in later | P4 | Architecture/security review |
