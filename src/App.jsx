@@ -133,6 +133,15 @@ export default function App() {
 
   useEffect(() => { setBatchStart(0); }, [selection, sheetIndex, draft, useQuantities, quantityColumn]);
   useEffect(() => { setPreviewIndex(0); }, [selection, sheetIndex, fileName]);
+  useEffect(() => {
+    if (!dirty) return undefined;
+    function confirmExit(event) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+    window.addEventListener('beforeunload', confirmExit);
+    return () => window.removeEventListener('beforeunload', confirmExit);
+  }, [dirty]);
 
   useEffect(() => {
     if (window.labelDesktop) {
@@ -179,7 +188,8 @@ export default function App() {
     }
   }
 
-  function applyTemplate(nextId) {
+  function applyTemplate(nextId, force = false) {
+    if (dirty && !force && !window.confirm('Discard unsaved changes to this label?')) return;
     const match = templates.find((item) => item.id === nextId) || DEFAULT_TEXT_TEMPLATE;
     const next = clone(match);
     setActiveId(next.id);
@@ -312,7 +322,7 @@ export default function App() {
     const name = draft.name;
     if (!window.confirm('Delete saved template "' + name + '"?')) return;
     if (!persistTemplates(savedTemplates.filter((item) => item.id !== activeId))) return;
-    applyTemplate(DEFAULT_TEXT_TEMPLATE.id);
+    applyTemplate(DEFAULT_TEXT_TEMPLATE.id, true);
     notify('success', 'Saved template deleted.');
   }
 
@@ -544,7 +554,7 @@ export default function App() {
 
     <nav className="desktop-menu-bar" aria-label="Desktop application menu">
       <details><summary>File</summary><div className="desktop-menu-popover">
-        <MenuAction onClick={() => { if (!dirty || window.confirm('Discard unsaved layout changes?')) applyTemplate(DEFAULT_TEXT_TEMPLATE.id); }}>New label</MenuAction>
+        <MenuAction onClick={() => applyTemplate(DEFAULT_TEXT_TEMPLATE.id)}>New label</MenuAction>
         <MenuAction onClick={() => fileRef.current?.click()}>Open Excel / CSV…</MenuAction>
         <MenuAction onClick={saveTemplate}>Save template</MenuAction>
         <MenuAction onClick={duplicateTemplate}>Save As (copy)…</MenuAction>
