@@ -216,3 +216,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,.upload-zone:focus
 .preview-navigation button{display:grid;place-items:center;border:1px solid #d9e3eb;color:#507789;background:#fff;border-radius:6px;height:24px;width:24px;cursor:pointer}
 .preview-navigation button:disabled{opacity:.35;cursor:default}
 @media(max-width:960px){.desktop-menu-bar{padding:0 12px;gap:0}.desktop-menu-bar details{min-width:55px}.desktop-menu-bar summary{padding:14px 8px}}
+
+.print-action-group{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:10px}
+@media(max-width:1200px){.print-bottom{flex-wrap:wrap}}
