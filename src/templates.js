@@ -9,8 +9,7 @@ export const DEFAULT_TEXT_TEMPLATE = {
   height: 30,
   fields: [
     { id: 'product', type: 'column', label: 'Product', columnKey: 'Product Name', autoField: 'name', x: 2, y: 3, width: 46, height: 10, fontSize: 15, bold: true, align: 'center', prefix: '', suffix: '' },
-    { id: 'price', type: 'column', label: 'Price', columnKey: 'Price', autoField: 'price', x: 2, y: 16, width: 46, height: 8, fontSize: 17, bold: true, align: 'center', prefix: '', suffix: ' EGP' },
-    { id: 'code', type: 'column', label: 'Product code', columnKey: 'Barcode', autoField: 'barcode', x: 2, y: 25, width: 46, height: 4, fontSize: 9, bold: false, align: 'center', prefix: 'Code: ', suffix: '' }
+    { id: 'price', type: 'column', label: 'Price', columnKey: 'Price', autoField: 'price', x: 2, y: 17, width: 46, height: 9, fontSize: 18, bold: true, align: 'center', prefix: '', suffix: ' EGP' }
   ]
 };
 
@@ -51,7 +50,7 @@ export function missingColumns(template, headers) {
 }
 
 export function printableTemplateRecords(records, selected, template, headers) {
-  return records.filter((record) => selected.has(record.id) &&
+  return records.filter((record) => template.fields.length > 0 && selected.has(record.id) &&
     record.cells.some((value) => String(value).trim()) &&
     (template.fields.some((field) => field.type === 'column' && fieldText(field, headers, record).trim()) ||
     !template.fields.some((field) => field.type === 'column')));
