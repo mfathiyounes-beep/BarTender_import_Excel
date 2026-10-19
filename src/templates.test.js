@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DEFAULT_TEXT_TEMPLATE, EXAMPLE_HEADERS, EXAMPLE_ROW, resolveColumnIndex,
+  DEFAULT_TEXT_TEMPLATE, BUILTIN_TEMPLATES, EXAMPLE_HEADERS, EXAMPLE_ROW, resolveColumnIndex,
   fieldText, missingColumns, printableTemplateRecords, sanitizeTemplate
 } from './templates.js';
 import { renderTextLabel, textPrintDocument } from './text-print.js';
@@ -72,4 +72,19 @@ test('sample preview comes from the exact sample data', () => {
   const html = renderTextLabel(DEFAULT_TEXT_TEMPLATE, EXAMPLE_HEADERS, EXAMPLE_ROW);
   assert.match(html, /Wireless Mouse/);
   assert.match(html, /325 EGP/);
+});
+
+test('built-in templates are distinct text-only layouts with bounded dimensions', () => {
+  assert.equal(new Set(BUILTIN_TEMPLATES.map((item) => item.id)).size, BUILTIN_TEMPLATES.length);
+  assert.ok(BUILTIN_TEMPLATES.length >= 4);
+  for (const template of BUILTIN_TEMPLATES) {
+    const checked = sanitizeTemplate(template);
+    assert.ok(checked && checked.fields.length > 0);
+    assert.ok(checked.width >= 20 && checked.height >= 15);
+    assert.ok(checked.fields.every((item) => item.type === 'text' || item.type === 'column'));
+  }
+});
+test('missing explicit saved column must not use an unrelated autoField fallback', () => {
+  const field = { type: 'column', columnKey: 'SKU', autoField: 'name' };
+  assert.equal(resolveColumnIndex(['Product Name', 'Price'], field), -1);
 });
