@@ -411,6 +411,21 @@ export default function App() {
     }
   }
 
+  async function exportPDF() {
+    if (!window.labelDesktop?.exportPDF) return notify('error', 'PDF export is available in the Windows desktop app.');
+    if (!sheet || !batchRows.length || missing.length) return notify('error', 'Import Excel and resolve missing field mappings first.');
+    setPrinting(true);
+    try {
+      const html = textPrintDocument(batchRows.map((row) =>
+        renderTextLabel(draft, sheet.headers, row)), draft);
+      const result = await window.labelDesktop.exportPDF(html, draft.width, draft.height);
+      if (result.cancelled) return;
+      if (!result.ok) throw new Error(result.error || 'Could not export PDF.');
+      notify('success', 'PDF exported: ' + result.filePath);
+    } catch (error) { notify('error', error.message || 'PDF export failed.'); }
+    finally { setPrinting(false); }
+  }
+
   async function printBatch() {
     if (!sheet || !batchRows.length) return notify('error', 'Select rows with data for at least one mapped label field.');
     if (missing.length) return notify('error', 'Fix missing Excel columns: ' + missing.join(', '));
@@ -475,6 +490,7 @@ export default function App() {
       </div></details>
       <details><summary>Print</summary><div className="desktop-menu-popover">
         <MenuAction onClick={printBatch} disabled={!sheet || !total || missing.length > 0 || printing}>Print current batch…</MenuAction>
+        <MenuAction onClick={exportPDF} disabled={!window.labelDesktop?.exportPDF || !sheet || !total || missing.length > 0 || printing}>Export current batch as PDF…</MenuAction>
       </div></details>
     </nav>
 
@@ -719,9 +735,14 @@ export default function App() {
             <button type="button" title="Previous batch" disabled={batchStart === 0} onClick={() => setBatchStart((n) => Math.max(0, n - PRINT_BATCH_SIZE))}><ChevronLeft size={18}/></button>
             <button type="button" title="Next batch" disabled={batchStart + PRINT_BATCH_SIZE >= total} onClick={() => setBatchStart((n) => n + PRINT_BATCH_SIZE)}><ChevronRight size={18}/></button>
             <small>{total ? Math.min(batchStart + 1, total) + '–' + Math.min(batchStart + PRINT_BATCH_SIZE, total) + ' of ' + total : 'No labels selected'}</small>
-          </div><button type="button" className="button button-primary print-final" disabled={!sheet || !total || missing.length > 0 || printing} onClick={printBatch}>
-            <Printer size={18}/>{printing ? 'Preparing…' : 'Print ' + batchRows.length + ' labels'}<ArrowRight size={16}/>
-          </button></div>
+          </div><div className="print-action-group">
+            {Boolean(window.labelDesktop?.exportPDF) && <button type="button" className="button button-outline" disabled={!sheet || !total || missing.length > 0 || printing} onClick={exportPDF}>
+              <Download size={17}/> Export PDF
+            </button>}
+            <button type="button" className="button button-primary print-final" disabled={!sheet || !total || missing.length > 0 || printing} onClick={printBatch}>
+              <Printer size={18}/>{printing ? 'Preparing…' : 'Print ' + batchRows.length + ' labels'}<ArrowRight size={16}/>
+            </button>
+          </div></div>
           <p className="print-tip"><Info size={16}/> Make sure your printer stock size is {draft.width} × {draft.height} mm, margins are 0, and scaling is 100%. Print one test label first.</p>
         </section>
         <footer className="footer"><span>Excel Label Studio · Free and offline</span><span>Text labels · Saved reusable templates · No BarTender license needed</span></footer>
