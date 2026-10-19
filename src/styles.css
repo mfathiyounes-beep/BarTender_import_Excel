@@ -234,3 +234,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,.upload-zone:focus
 .canvas-resize-handle:hover{background:#037971}
 .canvas-resize-handle span{display:block;height:6px;width:6px;margin:auto;border-right:1px solid white;border-bottom:1px solid white}
 .canvas-resize-handle:focus-visible{outline:3px solid #a8f3e7;outline-offset:2px}
+
+/* Real millimeter rulers scale with label zoom; editor-only UI */
+.ruler-layout{display:grid;align-items:stretch;justify-items:stretch;flex:none;box-shadow:0 8px 20px #19293f14}
+.ruler-corner,.ruler-top,.ruler-left{position:relative;background:#e9eef3;color:#60768a;font-family:Consolas,monospace;font-size:9px;overflow:hidden}
+.ruler-corner{display:flex;align-items:center;justify-content:center;border-bottom:1px solid #c5cfd9;border-right:1px solid #c5cfd9;font-weight:800}
+.ruler-top{border-bottom:1px solid #c5cfd9}
+.ruler-left{border-right:1px solid #c5cfd9}
+.ruler-mark{position:absolute;display:block;white-space:nowrap;font-weight:600;line-height:1}
+.ruler-mark-top{top:1px;transform:translateX(1px)}
+.ruler-mark-top::before{content:"";position:absolute;top:12px;left:0;height:7px;border-left:1px solid #8fa5b7}
+.ruler-mark-left{left:2px;transform:translateY(1px)}
+.ruler-mark-left::before{content:"";position:absolute;top:0;left:19px;width:5px;border-top:1px solid #8fa5b7}
