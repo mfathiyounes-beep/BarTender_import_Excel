@@ -1,10 +1,12 @@
 export const COLUMN_FIELDS = ['name', 'barcode', 'price', 'quantity', 'description'];
 export const PRINT_BATCH_SIZE = 100;
 
-export function normalizeTable(name, rows) {
+export function normalizeTable(name, rows, chosenHeaderIndex = null) {
   if (!Array.isArray(rows) || !rows.length) return null;
-  const headIndex = rows.findIndex((row) =>
-    Array.isArray(row) && row.some((value) => String(value ?? '').trim()));
+  const headIndex = Number.isInteger(chosenHeaderIndex) && chosenHeaderIndex >= 0
+    ? chosenHeaderIndex
+    : rows.findIndex((row) =>
+      Array.isArray(row) && row.some((value) => String(value ?? '').trim()));
   if (headIndex < 0) return null;
   const headRow = rows[headIndex] || [];
   const width = Math.min(40, Math.max(headRow.length, 1));
@@ -22,7 +24,7 @@ export function normalizeTable(name, rows) {
       cells: Array.from({ length: width }, (_, c) => String(cells?.[c] ?? '').trim())
     }))
     .filter(({ cells }) => cells.some(Boolean));
-  return { name, headers, records };
+  return { name, headers, records, headerRow: headIndex + 1 };
 }
 
 export function guessMapping(headers) {
