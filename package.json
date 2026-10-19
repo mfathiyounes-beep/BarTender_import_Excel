@@ -1,6 +1,6 @@
 {
   "name": "excel-label-studio",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Offline, reusable Excel-to-text label template designer and Windows printer",
