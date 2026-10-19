@@ -8,11 +8,12 @@ import {
 import { readSpreadsheet } from './importers.js';
 import { normalizeTable, guessMapping, totalLabels, makeBatch, PRINT_BATCH_SIZE } from './core.js';
 import {
-  DEFAULT_TEXT_TEMPLATE, BUILTIN_TEMPLATES, EXAMPLE_HEADERS, EXAMPLE_ROW, TEMPLATE_STORAGE_KEY,
+  DEFAULT_TEXT_TEMPLATE, BUILTIN_TEMPLATES, EXAMPLE_HEADERS, EXAMPLE_ROW,
   headerKey, resolveColumnIndex, fieldText, missingColumns,
   printableTemplateRecords, sanitizeTemplate, generateTemplateId
 } from './templates.js';
 import { renderTextLabel, textPrintDocument, textLabelStyles, browserPrint } from './text-print.js';
+import { readTemplateLibrary, writeTemplateLibrary, validateLibraryImport, exportTemplateLibrary } from './template-library.js';
 import './styles.css';
 
 const EXAMPLE_ROWS = [
@@ -24,15 +25,6 @@ const EXAMPLE_ROWS = [
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const bounded = (number, min, max) => Math.max(min, Math.min(max, number));
 const pxPerMm = 96 / 25.4;
-
-function loadTemplates() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(TEMPLATE_STORAGE_KEY) || '[]');
-    if (!Array.isArray(stored)) return [];
-    return stored.slice(0, 50).map(sanitizeTemplate).filter(Boolean)
-      .filter((item) => !BUILTIN_TEMPLATES.some((builtin) => builtin.id === item.id));
-  } catch { return []; }
-}
 
 function ButtonIcon({ icon: Icon, children, onClick, disabled = false, variant = 'soft' }) {
   return <button type="button" className={'studio-button studio-button-' + variant} onClick={onClick} disabled={disabled}>
@@ -64,7 +56,9 @@ export default function App() {
   const [sheets, setSheets] = useState([]);
   const [fileName, setFileName] = useState('');
   const [sheetIndex, setSheetIndex] = useState(0);
-  const [savedTemplates, setSavedTemplates] = useState(loadTemplates);
+  const [initialLibrary] = useState(() => readTemplateLibrary(window.localStorage));
+  const [savedTemplates, setSavedTemplates] = useState(() => initialLibrary.templates);
+  const [storageBlocked, setStorageBlocked] = useState(() => initialLibrary.blocked);
   const [activeId, setActiveId] = useState(DEFAULT_TEXT_TEMPLATE.id);
   const [draft, setDraft] = useState(() => clone(DEFAULT_TEXT_TEMPLATE));
   const [dirty, setDirty] = useState(false);
@@ -124,9 +118,8 @@ export default function App() {
   const previewWarning = sheet && missing.length && !printable.length;
 
   useEffect(() => {
-    try { localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(savedTemplates)); }
-    catch { /* browser storage may be disabled */ }
-  }, [savedTemplates]);
+    if (initialLibrary.warning) setNotice({ type: 'error', text: initialLibrary.warning });
+  }, [initialLibrary]);
 
   useEffect(() => { setBatchStart(0); }, [selection, sheetIndex, draft, useQuantities, quantityColumn]);
   useEffect(() => { setPreviewIndex(0); }, [selection, sheetIndex, fileName]);
@@ -162,6 +155,19 @@ export default function App() {
   }, [draft, sheet, total, printing, missing, historyVersion]);
 
   const notify = (type, text) => setNotice({ type, text });
+
+  function persistTemplates(next) {
+    try {
+      const saved = writeTemplateLibrary(window.localStorage, next);
+      setSavedTemplates(saved);
+      setStorageBlocked(false);
+      return true;
+    } catch (error) {
+      notify('error', 'Templates were NOT saved: ' + (error?.message || 'Storage error') +
+        '. Export a backup or free up disk space.');
+      return false;
+    }
+  }
 
   function applyTemplate(nextId) {
     const match = templates.find((item) => item.id === nextId) || DEFAULT_TEXT_TEMPLATE;
@@ -268,11 +274,11 @@ export default function App() {
     const isDefault = isBuiltin;
     const item = sanitizeTemplate({ ...draft, id: isDefault ? generateTemplateId() : activeId });
     if (isDefault && savedTemplates.length >= 50) return notify('error', 'Maximum 50 saved templates.');
-    setSavedTemplates((previous) =>
-      isDefault ? [...previous, item] :
-      previous.some((template) => template.id === item.id)
-        ? previous.map((template) => template.id === item.id ? item : template)
-        : [...previous, item]);
+    const next = isDefault ? [...savedTemplates, item] :
+      savedTemplates.some((template) => template.id === item.id)
+        ? savedTemplates.map((template) => template.id === item.id ? item : template)
+        : [...savedTemplates, item];
+    if (!persistTemplates(next)) return;
     setActiveId(item.id);
     setDraft(item);
     setDirty(false);
@@ -284,7 +290,7 @@ export default function App() {
     const item = sanitizeTemplate({
       ...draft, id: generateTemplateId(), name: draft.name + ' · Copy'
     });
-    setSavedTemplates((previous) => [...previous, item]);
+    if (!persistTemplates([...savedTemplates, item])) return;
     setActiveId(item.id);
     setDraft(item);
     setDirty(false);
@@ -295,7 +301,7 @@ export default function App() {
     if (isBuiltin) return;
     const name = draft.name;
     if (!window.confirm('Delete saved template "' + name + '"?')) return;
-    setSavedTemplates((previous) => previous.filter((item) => item.id !== activeId));
+    if (!persistTemplates(savedTemplates.filter((item) => item.id !== activeId))) return;
     applyTemplate(DEFAULT_TEXT_TEMPLATE.id);
     notify('success', 'Saved template deleted.');
   }
@@ -313,25 +319,43 @@ export default function App() {
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
+  function downloadJSON(documentData, name) {
+    const blob = new Blob([JSON.stringify(documentData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
+  function backupAllTemplates() {
+    try {
+      downloadJSON(exportTemplateLibrary(savedTemplates), 'Excel-Label-Studio-Template-Backup.json');
+      notify('success', 'Downloaded a backup of ' + savedTemplates.length + ' custom templates.');
+    } catch (error) { notify('error', error.message || 'Could not back up templates.'); }
+  }
+
   async function importTemplate(file) {
     if (!file) return;
     try {
-      if (file.size > 100_000) throw new Error('Template file is too large.');
+      if (file.size > 300_000) throw new Error('Template file is too large.');
       const parsed = JSON.parse(await file.text());
-      if (!parsed || !Array.isArray(parsed.fields) || !parsed.fields.length)
-        throw new Error('Not a valid text-label template.');
-      const item = sanitizeTemplate({
-        ...parsed, id: generateTemplateId(),
-        name: (parsed.name || 'Imported template') + ' · Imported'
-      });
-      if (!item) throw new Error('Invalid template contents.');
-      if (savedTemplates.length >= 50) throw new Error('Maximum 50 saved templates.');
-      setSavedTemplates((previous) => [...previous, item]);
-      setActiveId(item.id);
-      setDraft(item);
-      setSelectedFieldId(item.fields[0]?.id || '');
+      const isLibrary = Array.isArray(parsed) || parsed?.kind === 'excel-label-studio-template-library';
+      const data = isLibrary ? validateLibraryImport(parsed) : [sanitizeTemplate(parsed)];
+      if (!data.length || data.some((item) => !item || !item.fields.length)) {
+        throw new Error('The selected JSON contains no valid text label templates.');
+      }
+      if (savedTemplates.length + data.length > 50) throw new Error('Maximum 50 saved templates.');
+      const imported = data.map((item) => sanitizeTemplate({
+        ...item, id: generateTemplateId(), name: item.name + ' · Imported'
+      }));
+      if (!persistTemplates([...savedTemplates, ...imported])) return;
+      const first = imported[0];
+      setActiveId(first.id);
+      setDraft(first);
+      setSelectedFieldId(first.fields[0]?.id || '');
       setDirty(false);
-      notify('success', 'Template imported. Excel columns will match by their header names.');
+      notify('success', 'Imported ' + imported.length + ' template(s) without replacing your existing templates.');
     } catch (error) { notify('error', error.message || 'Template import failed.'); }
     finally { if (templateFileRef.current) templateFileRef.current.value = ''; }
   }
@@ -582,12 +606,14 @@ export default function App() {
           <div className="template-actions">
             <ButtonIcon icon={Save} onClick={saveTemplate}>{isBuiltin ? 'Save as new' : 'Save changes'}</ButtonIcon>
             <ButtonIcon icon={Plus} onClick={duplicateTemplate}>Duplicate</ButtonIcon>
-            <ButtonIcon icon={Download} onClick={exportTemplate}>Export</ButtonIcon>
-            <ButtonIcon icon={FolderOpen} onClick={() => templateFileRef.current?.click()}>Import</ButtonIcon>
+            <ButtonIcon icon={Download} onClick={exportTemplate}>Export current</ButtonIcon>
+            <ButtonIcon icon={FolderOpen} onClick={() => templateFileRef.current?.click()}>Import JSON</ButtonIcon>
+            <ButtonIcon icon={Download} onClick={backupAllTemplates}>Back up all</ButtonIcon>
             <ButtonIcon icon={Trash2} variant="danger" disabled={isBuiltin} onClick={deleteTemplate}>Delete</ButtonIcon>
           </div>
           <input ref={templateFileRef} className="hidden-input" type="file" accept=".json,application/json" onChange={(e) => importTemplate(e.target.files?.[0])}/>
-          <p className="panel-hint template-tip">Saved templates remember Excel column names and the position of every text field. Export JSON to use them on another PC.</p>
+          <p className="panel-hint template-tip">Saved templates remember Excel column names and field positions. Every save keeps a previous-good recovery copy. Export a JSON backup before moving to another PC.</p>
+          {storageBlocked && <p className="inline-warning" role="alert">Local template storage is unreadable or unavailable. Editing still works, but Save will not overwrite damaged data. Check the warning above and back up anything accessible.</p>}
         </section>
 
         <section className="panel">
