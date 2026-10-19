@@ -15,7 +15,12 @@ export function renderTextLabel(template, headers, record) {
       'width:' + mm(field.width),
       'height:' + mm(field.height),
       'font-size:' + Number(field.fontSize) + 'px',
+      'font-family:' + JSON.stringify(field.fontFamily || 'Arial'),
       'font-weight:' + (field.bold ? 700 : 400),
+      'font-style:' + (field.italic ? 'italic' : 'normal'),
+      'text-decoration:' + (field.underline ? 'underline' : 'none'),
+      'white-space:' + (field.wrap === false ? 'nowrap' : 'pre-wrap'),
+      'transform:rotate(' + Number(field.rotation || 0) + 'deg)',
       'text-align:' + field.align
     ].join(';');
     return '<div class="text-label-field" data-field-id="' + escapeHtml(field.id) +
