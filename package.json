@@ -12,7 +12,7 @@
     "test": "node --test",
     "desktop": "npm run build && electron .",
     "desktop:dev": "concurrently -k \"npm:dev\" \"wait-on http://127.0.0.1:5173 && cross-env ELECTRON_START_URL=http://127.0.0.1:5173 electron .\"",
-    "dist:win": "npm run build && electron-builder --win nsis portable --publish never"
+    "dist:win": "npm run build && electron-builder --win --publish never"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
@@ -44,7 +44,8 @@
     ],
     "win": {
       "target": [
-        "nsis"
+        "nsis",
+        "portable"
       ]
     },
     "nsis": {
