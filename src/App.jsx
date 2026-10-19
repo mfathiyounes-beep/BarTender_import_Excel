@@ -40,6 +40,13 @@ function ButtonIcon({ icon: Icon, children, onClick, disabled = false, variant =
   </button>;
 }
 
+function MenuAction({ children, onClick, disabled = false }) {
+  return <button type="button" disabled={disabled} onClick={(event) => {
+    event.currentTarget.closest('details')?.removeAttribute('open');
+    onClick();
+  }}>{children}</button>;
+}
+
 function SectionHeader({ icon: Icon, step, children }) {
   return <div className="panel-title"><div className="panel-title-main"><Icon size={18}/><h2>{children}</h2></div><span className="step-tag">{step}</span></div>;
 }
@@ -196,6 +203,18 @@ export default function App() {
         fontSize: 12, bold: false, align: 'center',
         prefix: '', suffix: ''
       }]
+    }));
+    setSelectedFieldId(id);
+  }
+
+  function duplicateField() {
+    if (!field || draft.fields.length >= 30) return;
+    const id = generateTemplateId();
+    editDraft((previous) => ({
+      ...previous,
+      fields: [...previous.fields, { ...field, id, label: field.label + ' copy',
+        x: Math.min(previous.width - field.width, field.x + 2),
+        y: Math.min(previous.height - field.height, field.y + 2) }]
     }));
     setSelectedFieldId(id);
   }
@@ -424,6 +443,40 @@ export default function App() {
         </button>
       </div>
     </header>
+
+    <nav className="desktop-menu-bar" aria-label="Desktop application menu">
+      <details><summary>File</summary><div className="desktop-menu-popover">
+        <MenuAction onClick={() => { if (!dirty || window.confirm('Discard unsaved layout changes?')) applyTemplate(DEFAULT_TEXT_TEMPLATE.id); }}>New label</MenuAction>
+        <MenuAction onClick={() => fileRef.current?.click()}>Open Excel / CSV…</MenuAction>
+        <MenuAction onClick={saveTemplate}>Save template</MenuAction>
+        <MenuAction onClick={duplicateTemplate}>Save As (copy)…</MenuAction>
+        <MenuAction onClick={exportTemplate}>Export template…</MenuAction>
+        <MenuAction onClick={() => templateFileRef.current?.click()}>Import template…</MenuAction>
+      </div></details>
+      <details><summary>Edit</summary><div className="desktop-menu-popover">
+        <MenuAction onClick={undoDraft} disabled={!historyRef.current.past.length}>Undo</MenuAction>
+        <MenuAction onClick={redoDraft} disabled={!historyRef.current.future.length}>Redo</MenuAction>
+        <MenuAction onClick={duplicateField} disabled={!field || draft.fields.length >= 30}>Duplicate selected field</MenuAction>
+        <MenuAction onClick={removeField} disabled={!field}>Delete selected field</MenuAction>
+      </div></details>
+      <details><summary>View</summary><div className="desktop-menu-popover">
+        <MenuAction onClick={() => setShowGrid((v) => !v)}>{showGrid ? 'Hide' : 'Show'} grid</MenuAction>
+        <MenuAction onClick={() => setZoom((v) => Math.min(2, v + .25))}>Zoom in</MenuAction>
+        <MenuAction onClick={() => setZoom((v) => Math.max(.5, v - .25))}>Zoom out</MenuAction>
+        <MenuAction onClick={() => setZoom(1)}>Actual zoom (100%)</MenuAction>
+      </div></details>
+      <details><summary>Insert</summary><div className="desktop-menu-popover">
+        <MenuAction onClick={() => addField('text')}>Text object</MenuAction>
+        <MenuAction onClick={() => addField('column')}>Excel field object</MenuAction>
+      </div></details>
+      <details><summary>Data</summary><div className="desktop-menu-popover">
+        <MenuAction onClick={() => fileRef.current?.click()}>Import database file…</MenuAction>
+        <MenuAction onClick={useExampleData}>Open sample data</MenuAction>
+      </div></details>
+      <details><summary>Print</summary><div className="desktop-menu-popover">
+        <MenuAction onClick={printBatch} disabled={!sheet || !total || missing.length > 0 || printing}>Print current batch…</MenuAction>
+      </div></details>
+    </nav>
 
     <main className="layout">
       <aside className="sidebar template-sidebar">
